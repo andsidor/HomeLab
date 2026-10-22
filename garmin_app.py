@@ -18,8 +18,8 @@ def login() -> Garmin:
         client = Garmin()
         client.login(str(TOKEN_DIR))
         return client
-    except Exception:
-        pass
+    except Exception as exc:
+        print(f"Brak ważnych tokenów ({type(exc).__name__}), logowanie hasłem.")
     email = os.environ.get("GARMIN_EMAIL") or input("Email: ")
     password = os.environ.get("GARMIN_PASSWORD") or getpass.getpass("Hasło: ")
     client = Garmin(email, password, prompt_mfa=lambda: input("Kod MFA: "))
