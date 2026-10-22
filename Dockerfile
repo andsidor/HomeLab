@@ -2,7 +2,8 @@ FROM python:3.13-slim
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip "setuptools>=78.1.1" \
+    && pip install --no-cache-dir -r requirements.txt
 COPY garmin_app.py .
 
 ENV HOME=/home/app
