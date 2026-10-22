@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: garmin-app
+  namespace: garmin
+spec:
+  schedule: "0 6 * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: garmin-app
+              image: ghcr.io/andsidor/homelab:latest
+              args: ["--days", "1"]
+              volumeMounts:
+                - { name: tokens, mountPath: /home/app/.garminconnect }
+                - { name: data, mountPath: /data }
+          volumes:
+            - name: tokens
+              emptyDir: {}
+            - name: data
+              emptyDir: {}
