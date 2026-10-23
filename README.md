@@ -84,35 +84,17 @@ Struktura w repo:
 
 Start (raz): `kubectl apply -f argocd/root-app.yaml`; kolejne aplikacje wdroży root app po dodaniu manifestu do Kustomize i wysłaniu zmian do Gita.
 
-Grafana (Helm chart w Argo CD) wymaga sekretu z danymi administratora przed synchronizacją aplikacji:
+Grafana (Helm chart w Argo CD) pobiera dane administratora z AWS przez ESO. Po synchronizacji:
 
 ```bash
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-read -rsp "Grafana admin password: " GRAFANA_ADMIN_PASSWORD; echo
-kubectl -n monitoring create secret generic grafana-admin \
-  --from-literal=admin-user=admin \
-  --from-literal=admin-password="$GRAFANA_ADMIN_PASSWORD"
-unset GRAFANA_ADMIN_PASSWORD
 kubectl -n monitoring port-forward svc/grafana 3000:80
 ```
 
-Panel będzie dostępny pod `http://localhost:3000` (login: `admin`).
+Panel będzie dostępny pod `http://localhost:3000`. AWS secret `homelab/monitoring/grafana-admin` powinien być obiektem JSON z polami `admin-user` i `admin-password`.
 
 ## External Secrets Operator + AWS
 
-`ClusterSecretStore` `aws-secretsmanager` łączy ESO z AWS Secrets Manager w regionie `eu-north-1`.
-Przed synchronizacją aplikacji utwórz credential Secret lokalnie w klastrze (nie dodawaj kluczy do Gita):
-
-```bash
-kubectl create namespace external-secrets --dry-run=client -o yaml | kubectl apply -f -
-read -rp "AWS access key ID: " AWS_ACCESS_KEY_ID
-read -rsp "AWS secret access key: " AWS_SECRET_ACCESS_KEY; printf '\n'
-kubectl -n external-secrets create secret generic aws-secretsmanager-credentials \
-  --from-literal=aws_access_key_id="$AWS_ACCESS_KEY_ID" \
-  --from-literal=aws_secret_access_key="$AWS_SECRET_ACCESS_KEY" \
-  --dry-run=client -o yaml | kubectl apply -f -
-unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
-```
+`ClusterSecretStore` `aws-secretsmanager` łączy ESO z AWS Secrets Manager w regionie `eu-north-1` przez istniejący Kubernetes Secret `awssm-secret` w namespace `external-secrets`. Store oczekuje w nim kluczy `aws_access_key_id` i `aws_secret_access_key`; wartości credentiali nie powinny trafiać do Gita.
 
 Użyj kluczy IAM z uprawnieniami `secretsmanager:GetSecretValue` i `secretsmanager:DescribeSecret`, ograniczonymi do ARN potrzebnych sekretów w `eu-north-1`. Przy własnym kluczu KMS dodaj także ograniczone `kms:Decrypt`. Po synchronizacji sprawdź store: `kubectl get clustersecretstore aws-secretsmanager`.
 
