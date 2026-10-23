@@ -70,15 +70,19 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 kubectl -n argocd port-forward svc/argocd-server 8080:443
 ```
 
-Dodanie aplikacji: `kubectl apply -f argocd/applications/<app>.yaml`
-(`repoURL: https://github.com/andsidor/HomeLab.git`, `path: k8s/<app>`).
+Nową aplikację dodaj jako manifest `Application` w `argocd/applications/`
+albo `argocd/infrastrucure/`, a następnie dopisz jej ścieżkę do
+`argocd/kustomization.yaml`. W manifeście ustaw `repoURL` na
+`https://github.com/andsidor/HomeLab.git` i `path` na katalog z Kustomize.
 
 Struktura w repo:
-- `argocd/root-app.yaml` - Application "app of apps", obserwuje `argocd/applications/`
+- `argocd/root-app.yaml` - Application "app of apps", obserwuje `argocd/`
+- `argocd/kustomization.yaml` - lista aplikacji oraz elementów infrastruktury zarządzanych przez root app
 - `argocd/applications/` - po jednym Application na aplikację
+- `argocd/infrastrucure/` - aplikacje i konfiguracja elementów klastra
 - `k8s/<app>/` - manifesty (Kustomize)
 
-Start (raz): `kubectl apply -f argocd/root-app.yaml`; kolejne aplikacje wystarczy dodać do Gita.
+Start (raz): `kubectl apply -f argocd/root-app.yaml`; kolejne aplikacje wdroży root app po dodaniu manifestu do Kustomize i wysłaniu zmian do Gita.
 
 Uwagi dot. `k8s/garmin-app/cronjob.yaml`: CronJob codziennie 6:00, tokeny i dane w `emptyDir`
 (nietrwałe, logowanie Garmin wymaga interaktywnego MFA, więc docelowo potrzebny PVC z tokenami).
