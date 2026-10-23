@@ -1,0 +1,5 @@
+{
+    "yaml.schemas": {
+        "kubernetes://schema/v1@namespace": "k8smsx://loadkubernetescore/namespace-argocd.yaml?value%3Dnamespace%2Fargocd%26_%3D1792789412741"
+    }
+}
