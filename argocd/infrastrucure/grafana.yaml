@@ -17,6 +17,13 @@ spec:
           passwordKey: admin-password
         service:
           type: ClusterIP
+        ingress:
+          enabled: true
+          ingressClassName: traefik
+          hosts:
+            - grafana.home.arpa
+          path: /
+          pathType: Prefix
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
