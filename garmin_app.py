@@ -101,6 +101,18 @@ def main():
         "garmin_sync_success": 0,
         "garmin_sync_last_attempt_timestamp_seconds": started_at,
         "garmin_sync_days_requested": args.days,
+        "garmin_steps_total": 0,
+        "garmin_distance_meters_total": 0,
+        "garmin_active_calories_total": 0,
+        "garmin_sleep_duration_seconds_total": 0,
+        "garmin_resting_heart_rate_bpm": 0,
+        "garmin_sync_days_completed": 0,
+        "garmin_sync_activities_total": 0,
+        "garmin_activity_distance_meters_total": 0,
+        "garmin_activity_duration_seconds_total": 0,
+        "garmin_activity_calories_total": 0,
+        "garmin_fit_files_downloaded_total": 0,
+        "garmin_sync_duration_seconds": 0,
     }
 
     try:
