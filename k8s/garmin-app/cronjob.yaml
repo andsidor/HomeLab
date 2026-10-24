@@ -14,8 +14,10 @@ spec:
           containers:
             - name: garmin-app
               image: ghcr.io/andsidor/homelab:latest
-              args: ["--days", "1"]
+              args: ["--days", "7"]
               env:
+                - name: HOME
+                  value: /data
                 - name: PROMETHEUS_PUSHGATEWAY
                   value: http://prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091
                 - name: GARMIN_API_TOKEN
@@ -24,10 +26,8 @@ spec:
                       name: garmin-api-token
                       key: garmin-api
               volumeMounts:
-                - { name: tokens, mountPath: /home/app/.garminconnect }
                 - { name: data, mountPath: /data }
           volumes:
-            - name: tokens
-              emptyDir: {}
             - name: data
-              emptyDir: {}
+              persistentVolumeClaim:
+                claimName: garmin-data

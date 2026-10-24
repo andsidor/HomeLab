@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - applications/garmin-app.yaml
   - infrastrucure/metallb.yaml
+  - infrastrucure/local-path-provisioner.yaml
   - infrastrucure/grafana.yaml
   - infrastrucure/prometheus.yaml
   - infrastrucure/external-secrets.yaml
