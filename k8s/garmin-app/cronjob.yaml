@@ -18,6 +18,11 @@ spec:
               env:
                 - name: PROMETHEUS_PUSHGATEWAY
                   value: http://prometheus-prometheus-pushgateway.monitoring.svc.cluster.local:9091
+                - name: GARMIN_API_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: garmin-api-token
+                      key: garmin-api
               volumeMounts:
                 - { name: tokens, mountPath: /home/app/.garminconnect }
                 - { name: data, mountPath: /data }
