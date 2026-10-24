@@ -147,7 +147,7 @@ def store_new_activities(client, connection, limit):
     batch_size = max(limit, 1)
     offset = 0
 
-    while len(new_activities) < batch_size:
+    while True:
         batch = client.get_activities(offset, batch_size)
         if not batch:
             break
@@ -171,12 +171,11 @@ def store_new_activities(client, connection, limit):
                 (activity_id, activity_date, json.dumps(activity, ensure_ascii=False)),
             )
             new_activities.append(activity)
-            if len(new_activities) >= batch_size:
-                break
 
         if found_existing or len(batch) < batch_size:
             break
         offset += len(batch)
+        time.sleep(0.2)
 
     return new_activities
 
@@ -197,9 +196,10 @@ def publish_metrics(metrics):
 
 def main():
     p = argparse.ArgumentParser(description="Pobieranie danych z Garmin Connect")
-    p.add_argument("--days", type=int, default=7, help="liczba ostatnich dni")
+    p.add_argument("--days", type=int, default=90, help="maksymalna liczba dni historii do pobrania w jednym uruchomieniu")
+    p.add_argument("--start-date", type=date.fromisoformat, help="początek historii, format YYYY-MM-DD")
     p.add_argument("--out", type=Path, default=Path("garmin_data"))
-    p.add_argument("--activities", type=int, default=10, help="liczba aktywności")
+    p.add_argument("--activities", type=int, default=100, help="rozmiar strony przy pobieraniu aktywności")
     p.add_argument("--download-fit", action="store_true", help="pobierz pliki FIT aktywności")
     args = p.parse_args()
 
@@ -217,15 +217,25 @@ def main():
     try:
         client = login()
         end_date = date.today() - timedelta(days=1)
+        new_activities = store_new_activities(client, database, args.activities)
+        database.commit()
         last_date_row = database.execute("SELECT MAX(day) FROM daily_data").fetchone()
         if last_date_row[0]:
             next_date = date.fromisoformat(last_date_row[0]) + timedelta(days=1)
+        elif args.start_date:
+            next_date = args.start_date
         else:
-            next_date = end_date - timedelta(days=max(args.days - 1, 0))
+            oldest_activity = database.execute(
+                "SELECT MIN(activity_date) FROM activities WHERE activity_date IS NOT NULL"
+            ).fetchone()[0]
+            if oldest_activity:
+                next_date = date.fromisoformat(oldest_activity[:10])
+            else:
+                next_date = end_date - timedelta(days=max(args.days - 1, 0))
 
         days_completed = 0
         current_date = next_date
-        while current_date <= end_date:
+        while current_date <= end_date and days_completed < args.days:
             day_date = current_date.isoformat()
             stats = client.get_stats(day_date)
             sleep = client.get_sleep_data(day_date)
@@ -246,13 +256,11 @@ def main():
             current_date += timedelta(days=1)
 
         database.commit()
-        activities = store_new_activities(client, database, args.activities)
-        database.commit()
-        save(activities, "new_activities", args.out)
+        save(new_activities, "new_activities", args.out)
 
         fit_files = 0
         if args.download_fit:
-            for activity in activities:
+            for activity in new_activities:
                 activity_id = activity["activityId"]
                 raw = client.download_activity(activity_id, dl_fmt=Garmin.ActivityDownloadFormat.ORIGINAL)
                 path = args.out / f"activity_{activity_id}.zip"

@@ -14,7 +14,7 @@ spec:
           containers:
             - name: garmin-app
               image: ghcr.io/andsidor/homelab:latest
-              args: ["--days", "7"]
+              args: ["--days", "9"]
               env:
                 - name: HOME
                   value: /data
