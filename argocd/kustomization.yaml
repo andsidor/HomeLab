@@ -3,6 +3,5 @@ kind: Kustomization
 resources:
   - applications/garmin-app.yaml
   - infrastrucure/metallb.yaml
-  - infrastrucure/grafana.yaml
   - infrastrucure/external-secrets.yaml
   - infrastrucure/external-secrets-namespace.yaml

@@ -3,4 +3,3 @@ kind: Kustomization
 resources:
   - monitoring-namespace.yaml
   - clustersecretstore.yaml
-  - grafana-admin-externalsecret.yaml
