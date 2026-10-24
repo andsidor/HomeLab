@@ -4,7 +4,7 @@ metadata:
   name: garmin-app
   namespace: garmin
 spec:
-  schedule: "0 6 * * *"
+  schedule: "0 */6 * * *"
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:
@@ -14,7 +14,7 @@ spec:
           containers:
             - name: garmin-app
               image: ghcr.io/andsidor/homelab:latest
-              args: ["--days", "9"]
+              args: ["--days", "99"]
               env:
                 - name: HOME
                   value: /data
