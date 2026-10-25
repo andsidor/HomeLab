@@ -1,4 +1,4 @@
-garminconnect
+garmin-connect-personal-api-python>=1.0,<2
 prometheus-client>=0.21.1
 urllib3>=2.8.0
 msgpack>=1.2.1

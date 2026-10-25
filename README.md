@@ -10,15 +10,16 @@ python garmin_app.py --days 7 --activities 10 --out garmin_data
 python garmin_app.py --download-fit        # dodatkowo pliki aktywności
 ```
 
-- Logowanie: `GARMIN_EMAIL` / `GARMIN_PASSWORD` lub prompt (z MFA).
-- Tokeny: `~/.garminconnect` (kolejne uruchomienia bez hasła).
+- Uwierzytelnianie: osobisty klucz Garmin Connect Personal API w `GARMIN_PERSONAL_API_KEY`.
+- Klucz API wymienia się automatycznie na bearer token; cache tokenu trafia do `~/.config/garmin`.
+- Klucz Personal API utworzysz w [ustawieniach Garmin Connect](https://connect.garmin.com/app/settings/personalApiToken). Traktuj go jak hasło.
 
 ## Docker
 
 ```bash
 docker build -t garmin-app .
 docker run -it --rm \
-  -v garmin_tokens:/home/app/.garminconnect \
+  --env GARMIN_PERSONAL_API_KEY \
   -v "$PWD/garmin_data:/data" \
   garmin-app --days 7
 ```
@@ -98,8 +99,7 @@ Panel będzie dostępny pod `http://localhost:3000`. AWS secret `homelab/monitor
 
 Użyj kluczy IAM z uprawnieniami `secretsmanager:GetSecretValue` i `secretsmanager:DescribeSecret`, ograniczonymi do ARN potrzebnych sekretów w `eu-north-1`. Przy własnym kluczu KMS dodaj także ograniczone `kms:Decrypt`. Po synchronizacji sprawdź store: `kubectl get clustersecretstore aws-secretsmanager`.
 
-Uwagi dot. `k8s/garmin-app/cronjob.yaml`: CronJob codziennie 6:00, tokeny i dane w `emptyDir`
-(nietrwałe, logowanie Garmin wymaga interaktywnego MFA, więc docelowo potrzebny PVC z tokenami).
+`k8s/garmin-app/cronjob.yaml` pobiera dane z Garmin Connect Personal API; klucz pochodzi z AWS przez ESO, a SQLite i cache bearer tokenu są przechowywane na PVC.
 
 Uwagi:
 - Sekretów nie commitować (Sealed Secrets / SOPS / External Secrets).

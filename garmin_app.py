@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Pobieranie danych z Garmin Connect (biblioteka garminconnect)."""
 import argparse
-import getpass
 import json
 import os
 import sqlite3
@@ -10,25 +9,20 @@ import time
 from datetime import date, timedelta
 from pathlib import Path
 
-from garminconnect import Garmin
+from garmin_personal_api import GarminPersonalApiClient, PersonalApiAuthenticator
 from prometheus_client import CollectorRegistry, Gauge, pushadd_to_gateway
 
 TOKEN_DIR = Path.home() / ".garminconnect"
 
 
-def login() -> Garmin:
-    # Najpierw zapisane tokeny, potem logowanie danymi z env/promptu.
-    try:
-        client = Garmin()
-        client.login(str(TOKEN_DIR))
-        return client
-    except Exception as exc:
-        print(f"Brak ważnych tokenów ({type(exc).__name__}), logowanie hasłem.")
-    email = os.environ.get("GARMIN_EMAIL") or input("Email: ")
-    password = os.environ.get("GARMIN_PASSWORD") or getpass.getpass("Hasło: ")
-    client = Garmin(email, password, prompt_mfa=lambda: input("Kod MFA: "))
-    client.login(str(TOKEN_DIR))
-    return client
+def create_api_client() -> GarminPersonalApiClient:
+    api_key = os.environ.get("GARMIN_PERSONAL_API_KEY")
+    if not api_key:
+        raise RuntimeError("Brak klucza GARMIN_PERSONAL_API_KEY.")
+
+    with PersonalApiAuthenticator() as authenticator:
+        token = authenticator.obtain_token(api_key)
+    return GarminPersonalApiClient(token.access_token)
 
 
 def save(data, name: str, outdir: Path):
@@ -148,7 +142,15 @@ def store_new_activities(client, connection, limit):
     offset = 0
 
     while True:
-        batch = client.get_activities(offset, batch_size)
+        response = client.search_activities(start=offset, limit=batch_size)
+        if isinstance(response, list):
+            batch = response
+        elif isinstance(response, dict):
+            batch = response.get("activities", response.get("data"))
+            if not isinstance(batch, list):
+                raise ValueError("Nieoczekiwany format odpowiedzi Garmin activities.")
+        else:
+            raise ValueError("Nieoczekiwany format odpowiedzi Garmin activities.")
         if not batch:
             break
 
@@ -214,8 +216,9 @@ def main():
         "garmin_sync_duration_seconds": 0,
     })
 
+    client = None
     try:
-        client = login()
+        client = create_api_client()
         end_date = date.today() - timedelta(days=1)
         new_activities = store_new_activities(client, database, args.activities)
         database.commit()
@@ -237,14 +240,14 @@ def main():
         current_date = next_date
         while current_date <= end_date and days_completed < args.days:
             day_date = current_date.isoformat()
-            stats = client.get_stats(day_date)
-            sleep = client.get_sleep_data(day_date)
-            heart_rate = client.get_heart_rates(day_date)
+            stats = client.get_daily_summaries(day_date, day_date)
+            sleep = client.get_daily_sleep(day_date)
+            heart_rate = client.get_daily_heart_rate(day_date)
             day = {
                 "stats": stats,
                 "sleep": sleep,
                 "heart_rate": heart_rate,
-                "steps": client.get_steps_data(day_date),
+                "steps": client.get_daily_steps(day_date, day_date),
             }
             database.execute(
                 "INSERT INTO daily_data (day, payload) VALUES (?, ?) "
@@ -293,6 +296,8 @@ def main():
         publish_metrics(metrics)
         raise
     finally:
+        if client is not None:
+            client.close()
         database.close()
 
     publish_metrics(metrics)
