@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pobieranie danych z Garmin Connect (biblioteka garminconnect)."""
+"""Pobieranie danych przez Garmin Connect Personal API."""
 import argparse
 import json
 import os
@@ -8,19 +8,18 @@ import sys
 import time
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any
 
 from garmin_personal_api import GarminPersonalApiClient, PersonalApiAuthenticator
 from prometheus_client import CollectorRegistry, Gauge, pushadd_to_gateway
 
-TOKEN_DIR = Path.home() / ".garminconnect"
 
-
-def create_api_client() -> GarminPersonalApiClient:
+def create_api_client(token_cache_path: Path) -> GarminPersonalApiClient:
     api_key = os.environ.get("GARMIN_PERSONAL_API_KEY")
     if not api_key:
         raise RuntimeError("Brak klucza GARMIN_PERSONAL_API_KEY.")
 
-    with PersonalApiAuthenticator() as authenticator:
+    with PersonalApiAuthenticator(bearer_token_cache_file=token_cache_path) as authenticator:
         token = authenticator.obtain_token(api_key)
     return GarminPersonalApiClient(token.access_token)
 
@@ -32,7 +31,7 @@ def save(data, name: str, outdir: Path):
     print(f"Zapisano: {path}")
 
 
-def metric_number(data, keys):
+def metric_number(data: Any, keys: tuple[str, ...]) -> float | None:
     if isinstance(data, dict):
         for key in keys:
             value = data.get(key)
@@ -84,8 +83,8 @@ def init_database(path: Path):
     return connection
 
 
-def collect_stored_metrics(connection):
-    metrics = {
+def collect_stored_metrics(connection: sqlite3.Connection) -> dict[str, int | float]:
+    metrics: dict[str, int | float] = {
         "garmin_steps_total": 0,
         "garmin_distance_meters_total": 0,
         "garmin_active_calories_total": 0,
@@ -97,9 +96,12 @@ def collect_stored_metrics(connection):
         "garmin_activity_duration_seconds_total": 0,
         "garmin_activity_calories_total": 0,
     }
-    daily_metric_keys = {
-        "garmin_steps_total": ("stats", ("totalSteps",)),
-        "garmin_distance_meters_total": ("stats", ("totalDistanceMeters",)),
+    daily_metric_keys: dict[str, tuple[str, tuple[str, ...]]] = {
+        "garmin_steps_total": ("stats", ("totalSteps", "steps")),
+        "garmin_distance_meters_total": (
+            "stats",
+            ("totalDistanceMeters", "distanceInMeters"),
+        ),
         "garmin_active_calories_total": ("stats", ("activeKilocalories", "activeCalories")),
         "garmin_sleep_duration_seconds_total": ("sleep", ("sleepTimeSeconds",)),
         "garmin_resting_heart_rate_bpm": ("heart_rate", ("restingHeartRate",)),
@@ -123,20 +125,30 @@ def collect_stored_metrics(connection):
             else:
                 metrics[metric_name] = sum(values)
 
-    activities = [
-        json.loads(payload)
-        for (payload,) in connection.execute("SELECT payload FROM activities")
-    ]
+    activity_count = 0
+    activity_totals = {"distance": 0.0, "duration": 0.0, "calories": 0.0}
+    for (payload,) in connection.execute("SELECT payload FROM activities"):
+        activity = json.loads(payload)
+        activity_count += 1
+        for key in activity_totals:
+            value = activity.get(key)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                activity_totals[key] += value
+
     metrics.update({
-        "garmin_sync_activities_stored": len(activities),
-        "garmin_activity_distance_meters_total": activity_total(activities, "distance"),
-        "garmin_activity_duration_seconds_total": activity_total(activities, "duration"),
-        "garmin_activity_calories_total": activity_total(activities, "calories"),
+        "garmin_sync_activities_stored": activity_count,
+        "garmin_activity_distance_meters_total": activity_totals["distance"],
+        "garmin_activity_duration_seconds_total": activity_totals["duration"],
+        "garmin_activity_calories_total": activity_totals["calories"],
     })
     return metrics
 
 
-def store_new_activities(client, connection, limit):
+def store_new_activities(
+    client: GarminPersonalApiClient,
+    connection: sqlite3.Connection,
+    limit: int,
+) -> list[dict[str, Any]]:
     new_activities = []
     batch_size = max(limit, 1)
     offset = 0
@@ -146,7 +158,10 @@ def store_new_activities(client, connection, limit):
         if isinstance(response, list):
             batch = response
         elif isinstance(response, dict):
-            batch = response.get("activities", response.get("data"))
+            batch = response.get(
+                "activityList",
+                response.get("activities", response.get("data")),
+            )
             if not isinstance(batch, list):
                 raise ValueError("Nieoczekiwany format odpowiedzi Garmin activities.")
         else:
@@ -155,23 +170,26 @@ def store_new_activities(client, connection, limit):
             break
 
         found_existing = False
-        for activity in batch:
+        for item in batch:
+            if not isinstance(item, dict):
+                raise ValueError("Nieoczekiwany element odpowiedzi Garmin activities.")
+            activity: dict[str, Any] = item
             activity_id = activity.get("activityId")
             if activity_id is None:
                 continue
             activity_id = str(activity_id)
-            exists = connection.execute(
-                "SELECT 1 FROM activities WHERE activity_id = ?", (activity_id,)
-            ).fetchone()
-            if exists:
+            cursor = connection.execute(
+                "INSERT OR IGNORE INTO activities (activity_id, activity_date, payload) "
+                "VALUES (?, ?, ?)",
+                (
+                    activity_id,
+                    activity.get("startTimeLocal") or activity.get("startTimeGMT"),
+                    json.dumps(activity, ensure_ascii=False),
+                ),
+            )
+            if cursor.rowcount == 0:
                 found_existing = True
                 break
-
-            activity_date = activity.get("startTimeLocal") or activity.get("startTimeGMT")
-            connection.execute(
-                "INSERT INTO activities (activity_id, activity_date, payload) VALUES (?, ?, ?)",
-                (activity_id, activity_date, json.dumps(activity, ensure_ascii=False)),
-            )
             new_activities.append(activity)
 
         if found_existing or len(batch) < batch_size:
@@ -197,12 +215,16 @@ def publish_metrics(metrics):
 
 
 def main():
-    p = argparse.ArgumentParser(description="Pobieranie danych z Garmin Connect")
+    p = argparse.ArgumentParser(description="Pobieranie danych przez Garmin Connect Personal API")
     p.add_argument("--days", type=int, default=90, help="maksymalna liczba dni historii do pobrania w jednym uruchomieniu")
     p.add_argument("--start-date", type=date.fromisoformat, help="początek historii, format YYYY-MM-DD")
     p.add_argument("--out", type=Path, default=Path("garmin_data"))
     p.add_argument("--activities", type=int, default=100, help="rozmiar strony przy pobieraniu aktywności")
-    p.add_argument("--download-fit", action="store_true", help="pobierz pliki FIT aktywności")
+    p.add_argument(
+        "--download-fit",
+        action="store_true",
+        help="pobierz archiwum ZIP z plikiem aktywności",
+    )
     args = p.parse_args()
 
     started_at = time.time()
@@ -218,7 +240,7 @@ def main():
 
     client = None
     try:
-        client = create_api_client()
+        client = create_api_client(args.out / ".garmin-personal-api-bearer-token.json")
         end_date = date.today() - timedelta(days=1)
         new_activities = store_new_activities(client, database, args.activities)
         database.commit()
@@ -261,14 +283,14 @@ def main():
         database.commit()
         save(new_activities, "new_activities", args.out)
 
-        fit_files = 0
+        activity_files = 0
         if args.download_fit:
             for activity in new_activities:
                 activity_id = activity["activityId"]
-                raw = client.download_activity(activity_id, dl_fmt=Garmin.ActivityDownloadFormat.ORIGINAL)
+                raw = client.download_activity(activity_id)
                 path = args.out / f"activity_{activity_id}.zip"
                 path.write_bytes(raw)
-                fit_files += 1
+                activity_files += 1
                 print(f"Zapisano: {path}")
 
         metrics = collect_stored_metrics(database)
@@ -278,7 +300,7 @@ def main():
             "garmin_sync_last_success_timestamp_seconds": time.time(),
             "garmin_sync_days_requested": args.days,
             "garmin_sync_days_completed": days_completed,
-            "garmin_fit_files_downloaded_last_run": fit_files,
+            "garmin_activity_files_downloaded_last_run": activity_files,
             "garmin_sync_duration_seconds": time.time() - started_at,
         })
         database.execute(
