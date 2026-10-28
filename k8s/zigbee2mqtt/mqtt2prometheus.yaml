@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mqtt2prometheus-config
+  namespace: zigbee2mqtt
+data:
+  config.yaml: |
+    mqtt:
+      server: tcp://mosquitto:1883
+      topic_path: zigbee2mqtt/+
+      device_id_regex: "zigbee2mqtt/(?P<deviceid>.*)"
+      qos: 0
+    cache:
+      timeout: 24h
+    metrics:
+      - prom_name: zigbee_temperature_celsius
+        mqtt_name: temperature
+        type: gauge
+        help: Temperatura
+      - prom_name: zigbee_humidity_percent
+        mqtt_name: humidity
+        type: gauge
+        help: Wilgotność
+      - prom_name: zigbee_battery_percent
+        mqtt_name: battery
+        type: gauge
+        help: Bateria
+      - prom_name: zigbee_linkquality
+        mqtt_name: linkquality
+        type: gauge
+        help: Jakość łącza
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt2prometheus
+  namespace: zigbee2mqtt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqtt2prometheus
+  template:
+    metadata:
+      labels:
+        app: mqtt2prometheus
+    spec:
+      containers:
+        - name: mqtt2prometheus
+          image: ghcr.io/hikhvar/mqtt2prometheus:v0.1.7
+          args:
+            - -config=/config/config.yaml
+          ports:
+            - containerPort: 9641
+          env:
+            - name: MQTT2PROM_MQTT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mqtt-credentials
+                  key: user
+            - name: MQTT2PROM_MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mqtt-credentials
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          configMap:
+            name: mqtt2prometheus-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt2prometheus
+  namespace: zigbee2mqtt
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9641"
+    prometheus.io/path: /metrics
+spec:
+  selector:
+    app: mqtt2prometheus
+  ports:
+    - port: 9641
+      targetPort: 9641
