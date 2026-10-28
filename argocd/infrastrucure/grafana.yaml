@@ -69,6 +69,57 @@ spec:
                     }
                   ]
                 }
+            garmin:
+              json: |
+                {
+                  "title": "Garmin",
+                  "uid": "garmin",
+                  "schemaVersion": 39,
+                  "time": {"from": "now-7d", "to": "now"},
+                  "refresh": "5m",
+                  "panels": [
+                    {
+                      "id": 1, "type": "timeseries", "title": "Kroki",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+                      "targets": [{"expr": "garmin_steps_total", "legendFormat": "kroki", "refId": "A"}]
+                    },
+                    {
+                      "id": 2, "type": "timeseries", "title": "Tetno spoczynkowe",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+                      "fieldConfig": {"defaults": {"unit": "none"}, "overrides": []},
+                      "targets": [{"expr": "garmin_resting_heart_rate_bpm", "legendFormat": "bpm", "refId": "A"}]
+                    },
+                    {
+                      "id": 3, "type": "timeseries", "title": "Sen",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+                      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+                      "targets": [{"expr": "garmin_sleep_duration_seconds_total", "legendFormat": "sen", "refId": "A"}]
+                    },
+                    {
+                      "id": 4, "type": "timeseries", "title": "Dystans",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+                      "fieldConfig": {"defaults": {"unit": "lengthm"}, "overrides": []},
+                      "targets": [
+                        {"expr": "garmin_distance_meters_total", "legendFormat": "dzienny", "refId": "A"},
+                        {"expr": "garmin_activity_distance_meters_total", "legendFormat": "aktywnosci", "refId": "B"}
+                      ]
+                    },
+                    {
+                      "id": 5, "type": "timeseries", "title": "Kalorie",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+                      "targets": [
+                        {"expr": "garmin_active_calories_total", "legendFormat": "aktywne", "refId": "A"},
+                        {"expr": "garmin_activity_calories_total", "legendFormat": "aktywnosci", "refId": "B"}
+                      ]
+                    },
+                    {
+                      "id": 6, "type": "stat", "title": "Ostatnia synchronizacja",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+                      "fieldConfig": {"defaults": {"unit": "dateTimeFromNow"}, "overrides": []},
+                      "targets": [{"expr": "garmin_sync_last_attempt_timestamp_seconds * 1000", "refId": "A"}]
+                    }
+                  ]
+                }
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
