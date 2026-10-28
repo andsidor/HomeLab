@@ -53,19 +53,19 @@ spec:
                       "id": 1, "type": "timeseries", "title": "Temperatura",
                       "gridPos": {"h": 9, "w": 12, "x": 0, "y": 0},
                       "fieldConfig": {"defaults": {"unit": "celsius"}, "overrides": []},
-                      "targets": [{"expr": "zigbee_temperature_celsius", "legendFormat": "{{sensor}}", "refId": "A"}]
+                      "targets": [{"expr": "last_over_time(zigbee_temperature_celsius[30m])", "legendFormat": "{{sensor}}", "refId": "A"}]
                     },
                     {
                       "id": 2, "type": "timeseries", "title": "Wilgotność",
                       "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
                       "fieldConfig": {"defaults": {"unit": "percent"}, "overrides": []},
-                      "targets": [{"expr": "zigbee_humidity_percent", "legendFormat": "{{sensor}}", "refId": "A"}]
+                      "targets": [{"expr": "last_over_time(zigbee_humidity_percent[30m])", "legendFormat": "{{sensor}}", "refId": "A"}]
                     },
                     {
                       "id": 3, "type": "stat", "title": "Bateria",
                       "gridPos": {"h": 5, "w": 24, "x": 0, "y": 9},
                       "fieldConfig": {"defaults": {"unit": "percent"}, "overrides": []},
-                      "targets": [{"expr": "zigbee_battery_percent", "legendFormat": "{{sensor}}", "refId": "A"}]
+                      "targets": [{"expr": "last_over_time(zigbee_battery_percent[30m])", "legendFormat": "{{sensor}}", "refId": "A"}]
                     }
                   ]
                 }
