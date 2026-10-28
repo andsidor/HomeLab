@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zigbee2mqtt-config
+  namespace: zigbee2mqtt
+data:
+  # Kopiowany do PVC tylko przy pierwszym starcie; user/hasło MQTT przez zmienne środowiskowe.
+  configuration.yaml: |
+    version: 4
+    homeassistant:
+      enabled: false
+    permit_join: false
+    frontend:
+      enabled: true
+      port: 8080
+    mqtt:
+      base_topic: zigbee2mqtt
+      server: mqtt://mosquitto:1883
+    serial:
+      port: /dev/ttyUSB0
+      adapter: ember
+      baudrate: 115200
+    advanced:
+      network_key: GENERATE
+      pan_id: GENERATE
+      ext_pan_id: GENERATE
+      log_level: info
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+  namespace: zigbee2mqtt
+data:
+  mosquitto.conf: |
+    listener 1883
+    allow_anonymous false
+    password_file /mosquitto/data/passwd
+    persistence true
+    persistence_location /mosquitto/data/
