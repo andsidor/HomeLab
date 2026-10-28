@@ -4,7 +4,7 @@ Repozytorium opisuje domowe środowisko Kubernetes zarządzane deklaratywnie prz
 
 ## Przegląd
 
-Projekt łączy podstawowe usługi klastra z aplikacją do pobierania danych Garmin. MetalLB udostępnia usługi przez adresy z lokalnej puli LAN, Local Path Provisioner zapewnia lokalne wolumeny, a External Secrets Operator synchronizuje wybrane sekrety z AWS Secrets Manager. Prometheus zbiera metryki, które można przeglądać w Grafanie.
+Projekt łączy podstawowe usługi klastra z aplikacją do pobierania danych Garmin oraz z systemem smart home opartym na Zigbee2MQTT i brokerze MQTT. MetalLB udostępnia usługi przez adresy z lokalnej puli LAN, Local Path Provisioner zapewnia lokalne wolumeny, a External Secrets Operator synchronizuje wybrane sekrety z AWS Secrets Manager. Prometheus zbiera metryki, które można przeglądać w Grafanie. Czujniki Zigbee publikują pomiary przez MQTT, a eksporter zamienia je na metryki Prometheusa. Cloudflare Tunnel pozwala bezpiecznie udostępnić Grafanę lub wybrany dashboard poza siecią domową.
 
 ```mermaid
 flowchart LR
@@ -17,6 +17,12 @@ flowchart LR
   Garmin --> Pushgateway[Prometheus Pushgateway]
   Pushgateway --> Prometheus[Prometheus]
   Prometheus --> Grafana[Grafana]
+  Root --> Z2M[Zigbee2MQTT + Mosquitto]
+  Sensor[Czujnik Zigbee] --> Dongle[Dongle Sonoff] --> Z2M
+  Z2M -->|MQTT| Exporter[mqtt2prometheus]
+  Exporter --> Prometheus
+  Root --> CF[cloudflared]
+  CF --> Grafana
 ```
 
 ## Technologie
@@ -31,6 +37,10 @@ flowchart LR
 | External Secrets Operator | Synchronizacja sekretów z AWS Secrets Manager. |
 | Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
 | Python i Garmin Connect Personal API | Pobieranie danych Garmin, zapis w SQLite i publikowanie metryk. |
+| Zigbee2MQTT | Obsługa czujników Zigbee przez dongle USB Sonoff i publikowanie pomiarów w MQTT. |
+| Mosquitto (MQTT) | Broker wiadomości MQTT z logowaniem; dane logowania pochodzą z AWS przez ESO. |
+| mqtt2prometheus | Zamiana pomiarów z MQTT na metryki Prometheusa. |
+| Cloudflare Tunnel (`cloudflared`) | Zdalny dostęp do Grafany bez otwierania portów w routerze. |
 
 ## Struktura repozytorium
 
@@ -41,6 +51,8 @@ flowchart LR
 | `argocd/applications/` | Definicje aplikacji wdrażanych z tego repozytorium. |
 | `argocd/infrastrucure/` | Konfiguracja usług i infrastruktury klastra. |
 | `k8s/garmin-app/` | CronJob, PVC i konfiguracja sekretu aplikacji Garmin. |
+| `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, eksporter `mqtt2prometheus` i dane logowania MQTT. |
+| `k8s/cloudflared/` | Tunel Cloudflare i sekret z tokenem pobierany z AWS. |
 | `garmin_app.py` | Pobieranie i zapisywanie danych Garmin oraz publikowanie metryk. |
 
 ## GitOps
@@ -55,8 +67,10 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 
 ## Usługi
 
-- **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus.
-- **Prometheus** przechowuje metryki przez 7 dni. Trwały wolumen dla serwera Prometheus jest obecnie wyłączony w konfiguracji Helm.
+- **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastrucure/grafana.yaml`.
+- **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).
+- **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
+- **Cloudflare Tunnel** łączy klaster z Cloudflare przez token z AWS; trasa publiczna wskazuje na Grafanę, a dostęp warto chronić przez Cloudflare Access.
 - **Garmin** działa jako CronJob co 6 godzin. Klucz Personal API jest synchronizowany z AWS przez ESO, dane trafiają do SQLite na PVC, a metryki są wysyłane do Pushgateway.
 
 ## Notatki i komendy
