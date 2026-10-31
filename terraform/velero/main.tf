@@ -56,9 +56,9 @@ variable "backup_schedule" {
 }
 
 variable "backup_ttl" {
-  description = "Czas przechowywania backupu Velero."
+  description = "Czas przechowywania backupu Velero; domyślnie 7 dni."
   type        = string
-  default     = "720h"
+  default     = "168h"
 }
 
 provider "aws" {

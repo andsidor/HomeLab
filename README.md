@@ -81,7 +81,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **MQTT credentials** (`mqtt-user`, `mqtt-password`) live in AWS Secrets Manager (`homelab/secrets`) and reach the cluster as the `mqtt-credentials` secret; anonymous access is disabled.
 - **Cloudflare Tunnel** connects the cluster to Cloudflare using a token from AWS (`cloudflared-token`). The public route targets `http://grafana.monitoring.svc.cluster.local:80`; protect it with Cloudflare Access or expose only the public dashboard paths.
 - **Garmin** runs as a CronJob every 30 minutes. The Personal API key is synced from AWS by ESO, data goes to SQLite on a PVC, and metrics are pushed to the Pushgateway.
-- **Velero** runs in namespace `velero`. It backs up cluster resources and pod-mounted PVC data to S3 every 30 minutes at :07 and :37 UTC, with 30-day retention. File-system backup uses the node-agent; CSI/EBS snapshots are disabled because the cluster uses local-path volumes.
+- **Velero** runs in namespace `velero`. It backs up cluster resources and pod-mounted PVC data to S3 every 30 minutes at :07 and :37 UTC, with 7-day retention. File-system backup uses the node-agent; CSI/EBS snapshots are disabled because the cluster uses local-path volumes.
 
 ## Notes and commands
 
@@ -249,7 +249,7 @@ To run a one-time backup and inspect PVC file-system backups:
 
 ```bash
 velero backup create manual-check --include-namespaces '*' \
-  --include-cluster-resources --default-volumes-to-fs-backup --ttl 720h
+  --include-cluster-resources --default-volumes-to-fs-backup --ttl 168h
 velero backup describe manual-check --details
 kubectl -n velero get podvolumebackups -l velero.io/backup-name=manual-check -o wide
 ```
@@ -337,7 +337,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
 - **Cloudflare Tunnel** łączy klaster z Cloudflare przez token z AWS; trasa publiczna wskazuje na Grafanę, a dostęp warto chronić przez Cloudflare Access.
 - **Garmin** działa jako CronJob co 30 minut. Klucz Personal API jest synchronizowany z AWS przez ESO, dane trafiają do SQLite na PVC, a metryki są wysyłane do Pushgateway.
-- **Velero** działa w namespace `velero`. Co 30 minut, o :07 i :37 UTC, zapisuje zasoby klastra i dane PVC zamontowane w podach do S3; retencja wynosi 30 dni. Backup plikowy wykorzystuje node-agent; snapshoty CSI/EBS są wyłączone, ponieważ klaster używa wolumenów local-path.
+- **Velero** działa w namespace `velero`. Co 30 minut, o :07 i :37 UTC, zapisuje zasoby klastra i dane PVC zamontowane w podach do S3; retencja wynosi 7 dni. Backup plikowy wykorzystuje node-agent; snapshoty CSI/EBS są wyłączone, ponieważ klaster używa wolumenów local-path.
 
 ## Notatki i komendy
 
@@ -517,7 +517,7 @@ Jednorazowy backup i kontrola plikowych kopii PVC:
 
 ```bash
 velero backup create manual-check --include-namespaces '*' \
-  --include-cluster-resources --default-volumes-to-fs-backup --ttl 720h
+  --include-cluster-resources --default-volumes-to-fs-backup --ttl 168h
 velero backup describe manual-check --details
 kubectl -n velero get podvolumebackups -l velero.io/backup-name=manual-check -o wide
 ```
