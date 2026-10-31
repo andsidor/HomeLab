@@ -32,6 +32,12 @@ variable "credentials_secret_name" {
   default     = "homelab/velero-backup"
 }
 
+variable "rke2_credentials_secret_name" {
+  description = "Nazwa sekretu AWS Secrets Manager dla snapshotów etcd RKE2."
+  type        = string
+  default     = "homelab/rke2-etcd-backup"
+}
+
 variable "name_prefix" {
   description = "Prefiks nazwy dedykowanego użytkownika IAM Velero."
   type        = string
@@ -134,6 +140,72 @@ resource "aws_secretsmanager_secret" "velero_credentials" {
   }
 }
 
+resource "aws_iam_user" "rke2_etcd" {
+  name = "${var.name_prefix}-rke2-etcd-backup"
+  path = "/homelab/"
+
+  tags = {
+    ManagedBy = "Terraform"
+    Project   = "HomeLab"
+    Purpose   = "RKE2EtcdSnapshot"
+  }
+}
+
+resource "aws_iam_policy" "rke2_etcd_s3" {
+  name        = "${var.name_prefix}-rke2-etcd-s3"
+  description = "S3 access for RKE2 etcd snapshots under the rke2-etcd prefix."
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketLocation",
+          "s3:ListBucket"
+        ]
+        Resource = "arn:aws:s3:::${var.backup_bucket_name}"
+        Condition = {
+          StringLike = {
+            "s3:prefix" = ["rke2-etcd", "rke2-etcd/*"]
+          }
+        }
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:AbortMultipartUpload",
+          "s3:DeleteObject",
+          "s3:GetObject",
+          "s3:PutObject"
+        ]
+        Resource = "arn:aws:s3:::${var.backup_bucket_name}/rke2-etcd/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "rke2_etcd_s3" {
+  user       = aws_iam_user.rke2_etcd.name
+  policy_arn = aws_iam_policy.rke2_etcd_s3.arn
+}
+
+resource "aws_secretsmanager_secret" "rke2_etcd_credentials" {
+  name                    = var.rke2_credentials_secret_name
+  description             = "Credentials for RKE2 etcd snapshots in S3."
+  recovery_window_in_days = 7
+
+  tags = {
+    ManagedBy = "Terraform"
+    Project   = "HomeLab"
+    Purpose   = "RKE2EtcdCredentials"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 locals {
   velero_values = {
     namespace = {
@@ -194,6 +266,52 @@ locals {
             secretKey = "secret_access_key"
             remoteRef = {
               key      = aws_secretsmanager_secret.velero_credentials.name
+              property = "secret_access_key"
+            }
+          }
+        ]
+      }
+      }, {
+      apiVersion = "external-secrets.io/v1"
+      kind       = "ExternalSecret"
+      metadata = {
+        name      = "rke2-etcd-s3-config"
+        namespace = "kube-system"
+      }
+      spec = {
+        refreshInterval = "1h"
+        secretStoreRef = {
+          name = "aws-secretsmanager"
+          kind = "ClusterSecretStore"
+        }
+        target = {
+          name           = "rke2-etcd-s3-config"
+          creationPolicy = "Owner"
+          template = {
+            engineVersion = "v2"
+            type          = "etcd.k3s.cattle.io/s3-config-secret"
+            data = {
+              "etcd-s3-access-key" = "{{ \"{{\" }} .access_key {{ \"}}\" }}"
+              "etcd-s3-secret-key" = "{{ \"{{\" }} .secret_access_key {{ \"}}\" }}"
+              "etcd-s3-bucket"     = var.backup_bucket_name
+              "etcd-s3-folder"     = "rke2-etcd"
+              "etcd-s3-region"     = var.aws_region
+              "etcd-s3-retention"  = "7"
+            }
+          }
+        }
+        data = [
+          {
+            secretKey = "access_key"
+            remoteRef = {
+              key      = aws_secretsmanager_secret.rke2_etcd_credentials.name
+              property = "access_key"
+            }
+          },
+          {
+            secretKey = "secret_access_key"
+            remoteRef = {
+              key      = aws_secretsmanager_secret.rke2_etcd_credentials.name
               property = "secret_access_key"
             }
           }
@@ -295,7 +413,9 @@ resource "helm_release" "velero" {
 
   depends_on = [
     aws_iam_user_policy_attachment.velero_s3,
-    aws_secretsmanager_secret.velero_credentials
+    aws_secretsmanager_secret.velero_credentials,
+    aws_iam_user_policy_attachment.rke2_etcd_s3,
+    aws_secretsmanager_secret.rke2_etcd_credentials
   ]
 }
 
@@ -317,4 +437,14 @@ output "velero_iam_user_name" {
 output "velero_credentials_secret_name" {
   description = "Sekret AWS Secrets Manager do wypełnienia kluczem IAM Velero."
   value       = aws_secretsmanager_secret.velero_credentials.name
+}
+
+output "rke2_etcd_iam_user_name" {
+  description = "Dedykowany IAM user z dostępem tylko do prefiksu rke2-etcd/ w bucketcie backupowym."
+  value       = aws_iam_user.rke2_etcd.name
+}
+
+output "rke2_etcd_credentials_secret_name" {
+  description = "Sekret AWS Secrets Manager dla credentiali snapshotów etcd RKE2."
+  value       = aws_secretsmanager_secret.rke2_etcd_credentials.name
 }
