@@ -2,7 +2,7 @@
 
 Ten katalog konfiguruje dwa osobne buckety S3: zdalny stan Terraform oraz kopie Velero. Stos `bootstrap` tworzy buckety, a `velero` tworzy ograniczone uprawnienia IAM i instaluje Velero w istniejącym klastrze RKE2 przez Helm.
 
-Velero zapisuje zasoby Kubernetes ze wszystkich namespace'ów oraz zawartość wolumenów zamontowanych w podach przez file-system backup node-agent. Harmonogram to codziennie 02:17 UTC, retencja 30 dni. Nie są używane snapshoty EBS/CSI. Kopie obejmują PVC używane przez pody, nie dowolne pliki hosta ani warstwy obrazów kontenerów.
+Velero zapisuje zasoby Kubernetes ze wszystkich namespace'ów oraz zawartość wolumenów zamontowanych w podach przez file-system backup node-agent. Harmonogram to codziennie 02:17 UTC, retencja 30 dni. Nie są używane snapshoty EBS/CSI. Kopie obejmują PVC używane przez pody, nie dowolne pliki hosta ani warstwy obrazów kontenerów. Release Velero utrzymuje w namespace `garmin` mały pod `velero-volume-mounter`, który montuje PVC `garmin-data`; jest potrzebny, bo krótkotrwały CronJob Garmin zwykle nie działa w chwili backupu.
 
 ## Wymagania
 
@@ -83,6 +83,6 @@ Przy pierwszej kopii sprawdź, czy powstał `PodVolumeBackup` dla PVC, i wykonaj
 
 ## Bezpieczeństwo
 
-Dedykowany użytkownik IAM ma dostęp tylko do bucketu backupowego. Jego klucz jest tworzony przez Terraform i przekazywany do sekretu Kubernetes przez chart Helm, dlatego secret znajduje się także w stanie Terraform. Stan jest szyfrowany przez S3 i wersjonowany; ogranicz dostęp IAM do obu bucketów, bo odczyt stanu ujawnia klucz. Zasoby Terraform nie są wdrażane przez Argo CD.
+Dedykowany użytkownik IAM ma dostęp tylko do bucketu backupowego. Jego klucz przechowuje AWS Secrets Manager, a External Secrets Operator synchronizuje go do namespace `velero`; wartość klucza nie trafia do Terraform state. Ogranicz dostęp do bucketa ze stanem i sekretu w Secrets Manager. Zasoby Terraform nie są wdrażane przez Argo CD.
 
 Terraform nie przejmuje zarządzania pozostałymi aplikacjami HomeLab. Velero tworzy niezależny backup ich bieżących zasobów klastra i zamontowanych PVC.

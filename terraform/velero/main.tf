@@ -199,6 +199,45 @@ locals {
           }
         ]
       }
+      }, {
+      apiVersion = "v1"
+      kind       = "Pod"
+      metadata = {
+        name      = "velero-volume-mounter"
+        namespace = "garmin"
+        labels = {
+          "app.kubernetes.io/name"    = "velero-volume-mounter"
+          "app.kubernetes.io/part-of" = "velero-backup"
+        }
+      }
+      spec = {
+        restartPolicy = "Always"
+        containers = [{
+          name    = "volume-mounter"
+          image   = "busybox:1.37.0"
+          command = ["sh", "-c", "while true; do sleep 3600; done"]
+          resources = {
+            requests = {
+              cpu    = "5m"
+              memory = "8Mi"
+            }
+            limits = {
+              cpu    = "50m"
+              memory = "32Mi"
+            }
+          }
+          volumeMounts = [{
+            name      = "garmin-data"
+            mountPath = "/data"
+          }]
+        }]
+        volumes = [{
+          name = "garmin-data"
+          persistentVolumeClaim = {
+            claimName = "garmin-data"
+          }
+        }]
+      }
     }]
     configuration = {
       backupStorageLocation = [{
