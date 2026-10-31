@@ -25,6 +25,9 @@ flowchart LR
   Exporter --> Prometheus
   Root --> CF[cloudflared]
   CF --> Grafana
+  Terraform[Terraform] --> StateS3[(S3 Terraform state)]
+  Terraform --> Velero[Velero on RKE2]
+  Velero --> BackupS3[(S3 cluster backups)]
 ```
 
 ## Technologies
@@ -38,6 +41,8 @@ flowchart LR
 | Rancher Local Path Provisioner | Local volumes for applications. |
 | External Secrets Operator | Syncs secrets from AWS Secrets Manager. |
 | Prometheus and Grafana | Metrics collection and dashboards. |
+| Terraform | Manages AWS backup resources and installs Velero in the existing RKE2 cluster. |
+| Velero | Backs up Kubernetes resources and mounted PVC data to Amazon S3. |
 | Python and Garmin Connect Personal API | Fetches Garmin data, stores it in SQLite and publishes metrics. |
 | Zigbee2MQTT | Handles Zigbee sensors through a Sonoff USB dongle and publishes readings to MQTT. |
 | Mosquitto (MQTT) | MQTT broker with authentication; credentials come from AWS through ESO. |
@@ -55,6 +60,7 @@ flowchart LR
 | `k8s/garmin-app/` | CronJob, PVC and secret configuration of the Garmin app. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, the `mqtt2prometheus` exporter and MQTT credentials. |
 | `k8s/cloudflared/` | Cloudflare tunnel and the token secret pulled from AWS. |
+| `terraform/` | S3 buckets, remote Terraform state, Velero IAM credentials, and Helm release. |
 | `garmin_app.py` | Fetches and stores Garmin data and publishes metrics. |
 
 ## GitOps
@@ -74,7 +80,8 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **Zigbee2MQTT** runs on the `debian` node with a Sonoff dongle, and its UI is exposed through MetalLB at `192.168.0.201:8080`. Readings go to the **Mosquitto** MQTT broker on topic `zigbee2mqtt/<device>`, and `mqtt2prometheus` exposes them to Prometheus.
 - **MQTT credentials** (`mqtt-user`, `mqtt-password`) live in AWS Secrets Manager (`homelab/secrets`) and reach the cluster as the `mqtt-credentials` secret; anonymous access is disabled.
 - **Cloudflare Tunnel** connects the cluster to Cloudflare using a token from AWS (`cloudflared-token`). The public route targets `http://grafana.monitoring.svc.cluster.local:80`; protect it with Cloudflare Access or expose only the public dashboard paths.
-- **Garmin** runs as a CronJob every 6 hours. The Personal API key is synced from AWS by ESO, data goes to SQLite on a PVC, and metrics are pushed to the Pushgateway.
+- **Garmin** runs as a CronJob every 30 minutes. The Personal API key is synced from AWS by ESO, data goes to SQLite on a PVC, and metrics are pushed to the Pushgateway.
+- **Velero** runs in namespace `velero`. It backs up cluster resources and pod-mounted PVC data to S3 every 30 minutes at :07 and :37 UTC, with 30-day retention. File-system backup uses the node-agent; CSI/EBS snapshots are disabled because the cluster uses local-path volumes.
 
 ## Notes and commands
 
@@ -172,6 +179,83 @@ Notes:
 - A private GHCR package requires an `imagePullSecret` (token with `read:packages`).
 - After the first login change the admin password and delete `argocd-initial-admin-secret`.
 
+## Terraform and Velero (AWS)
+
+Terraform manages two separate S3 buckets: one for remote Terraform state and one for Velero backups. Both use encryption, versioning, public access blocking, and a TLS-only bucket policy. Terraform state is locked with S3 lockfiles. Do not commit `terraform.tfstate`, `.terraform/`, plan files, or credentials.
+
+The bootstrap stack first creates the buckets using a local state, then migrates its state to S3. The Velero stack uses a separate key in the state bucket. AWS access for Terraform uses IAM Identity Center; the dedicated IAM user `homelab-sidor-velero-backup` has access only to the backup bucket. Its key is stored in Secrets Manager (`homelab/velero-backup`) and synced to namespace `velero` by External Secrets. The key value is not stored in Terraform state.
+
+Configure and sign in to the AWS profile:
+
+```bash
+aws configure sso --profile homelab
+AWS_PROFILE=homelab aws sso login
+AWS_PROFILE=homelab aws sts get-caller-identity
+```
+
+Create the buckets and migrate the bootstrap state:
+
+```bash
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap init
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap plan
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap apply
+
+cp terraform/bootstrap/backend.tf.example terraform/bootstrap/backend.tf
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap init -migrate-state -force-copy \
+  -backend-config="bucket=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw state_bucket_name)" \
+  -backend-config="key=bootstrap/terraform.tfstate" \
+  -backend-config="region=eu-north-1" \
+  -backend-config="use_lockfile=true"
+```
+
+Plan and install Velero:
+
+```bash
+AWS_PROFILE=homelab terraform -chdir=terraform/velero init \
+  -backend-config="bucket=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw state_bucket_name)" \
+  -backend-config="key=velero/terraform.tfstate" \
+  -backend-config="region=eu-north-1" \
+  -backend-config="use_lockfile=true"
+
+AWS_PROFILE=homelab terraform -chdir=terraform/velero plan \
+  -var="backup_bucket_name=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw backup_bucket_name)"
+
+AWS_PROFILE=homelab terraform -chdir=terraform/velero apply \
+  -var="backup_bucket_name=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw backup_bucket_name)"
+```
+
+Create the Velero IAM access key once and pipe it directly to Secrets Manager. This requires `jq`; the key is not printed. Do not rerun without checking active keys, because IAM users can have at most two access keys.
+
+```bash
+set -o pipefail
+AWS_PROFILE=homelab aws iam create-access-key \
+  --user-name "$(AWS_PROFILE=homelab terraform -chdir=terraform/velero output -raw velero_iam_user_name)" \
+  --output json \
+| jq -c '{access_key: .AccessKey.AccessKeyId, secret_access_key: .AccessKey.SecretAccessKey}' \
+| AWS_PROFILE=homelab aws secretsmanager put-secret-value \
+    --secret-id "$(AWS_PROFILE=homelab terraform -chdir=terraform/velero output -raw velero_credentials_secret_name)" \
+    --secret-string file:///dev/stdin
+```
+
+Verify Velero and its backup location:
+
+```bash
+kubectl -n velero get pods
+kubectl -n velero get externalsecret,backupstoragelocation,schedules
+kubectl -n velero get backups
+```
+
+To run a one-time backup and inspect PVC file-system backups:
+
+```bash
+velero backup create manual-check --include-namespaces '*' \
+  --include-cluster-resources --default-volumes-to-fs-backup --ttl 720h
+velero backup describe manual-check --details
+kubectl -n velero get podvolumebackups -l velero.io/backup-name=manual-check -o wide
+```
+
+Velero can back up PVC files only when a pod has the volume mounted. The Garmin PVC uses local-path, so Terraform also creates `velero-volume-mounter` in namespace `garmin`. The cluster/resource backup completed, but a `PodVolumeBackup` for `garmin-data` was not confirmed in the validation runs on 2026-10-31. Do not consider Garmin files protected until a completed PVB for `garmin/garmin-data` is visible and a restore to an isolated PVC has been tested. File-system backup reads a live filesystem and is not an atomic SQLite snapshot.
+
 ---
 
 # HomeLab (wersja polska)
@@ -198,6 +282,9 @@ flowchart LR
   Exporter --> Prometheus
   Root --> CF[cloudflared]
   CF --> Grafana
+  Terraform[Terraform] --> StateS3[(S3 state Terraform)]
+  Terraform --> Velero[Velero w RKE2]
+  Velero --> BackupS3[(Backup klastra w S3)]
 ```
 
 ## Technologie
@@ -211,6 +298,8 @@ flowchart LR
 | Rancher Local Path Provisioner | Lokalne wolumeny dla aplikacji. |
 | External Secrets Operator | Synchronizacja sekretów z AWS Secrets Manager. |
 | Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
+| Terraform | Zarządzanie zasobami AWS do backupu i instalacja Velero w istniejącym klastrze RKE2. |
+| Velero | Backup zasobów Kubernetes i danych zamontowanych PVC do Amazon S3. |
 | Python i Garmin Connect Personal API | Pobieranie danych Garmin, zapis w SQLite i publikowanie metryk. |
 | Zigbee2MQTT | Obsługa czujników Zigbee przez dongle USB Sonoff i publikowanie pomiarów w MQTT. |
 | Mosquitto (MQTT) | Broker wiadomości MQTT z logowaniem; dane logowania pochodzą z AWS przez ESO. |
@@ -228,6 +317,7 @@ flowchart LR
 | `k8s/garmin-app/` | CronJob, PVC i konfiguracja sekretu aplikacji Garmin. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, eksporter `mqtt2prometheus` i dane logowania MQTT. |
 | `k8s/cloudflared/` | Tunel Cloudflare i sekret z tokenem pobierany z AWS. |
+| `terraform/` | Buckety S3, zdalny state Terraform, uprawnienia Velero i release Helm. |
 | `garmin_app.py` | Pobieranie i zapisywanie danych Garmin oraz publikowanie metryk. |
 
 ## GitOps
@@ -246,7 +336,8 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).
 - **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
 - **Cloudflare Tunnel** łączy klaster z Cloudflare przez token z AWS; trasa publiczna wskazuje na Grafanę, a dostęp warto chronić przez Cloudflare Access.
-- **Garmin** działa jako CronJob co 6 godzin. Klucz Personal API jest synchronizowany z AWS przez ESO, dane trafiają do SQLite na PVC, a metryki są wysyłane do Pushgateway.
+- **Garmin** działa jako CronJob co 30 minut. Klucz Personal API jest synchronizowany z AWS przez ESO, dane trafiają do SQLite na PVC, a metryki są wysyłane do Pushgateway.
+- **Velero** działa w namespace `velero`. Co 30 minut, o :07 i :37 UTC, zapisuje zasoby klastra i dane PVC zamontowane w podach do S3; retencja wynosi 30 dni. Backup plikowy wykorzystuje node-agent; snapshoty CSI/EBS są wyłączone, ponieważ klaster używa wolumenów local-path.
 
 ## Notatki i komendy
 
@@ -355,3 +446,80 @@ Uwagi:
 - Sekretów nie commitować (Sealed Secrets / SOPS / External Secrets).
 - Prywatny pakiet GHCR wymaga `imagePullSecret` (token `read:packages`).
 - Po zalogowaniu zmienić hasło admina i usunąć `argocd-initial-admin-secret`.
+
+## Terraform i Velero (AWS)
+
+Terraform zarządza dwoma osobnymi bucketami S3: jednym na zdalny state Terraform i drugim na backupy Velero. Oba mają szyfrowanie, wersjonowanie, blokadę publicznego dostępu i politykę wymuszającą TLS. Blokada state używa S3 lockfiles. Nie commituj `terraform.tfstate`, `.terraform/`, planów ani credentiali.
+
+Stos bootstrap najpierw tworzy buckety z lokalnym state, a następnie migruje state do S3. Stos Velero używa osobnego klucza w bucketcie state. Terraform loguje się przez IAM Identity Center. Dedykowany IAM user `homelab-sidor-velero-backup` ma dostęp tylko do bucketa backupowego. Jego klucz jest zapisany w Secrets Manager (`homelab/velero-backup`) i synchronizowany przez External Secrets do namespace `velero`; wartość klucza nie trafia do Terraform state.
+
+Konfiguracja i logowanie profilu AWS:
+
+```bash
+aws configure sso --profile homelab
+AWS_PROFILE=homelab aws sso login
+AWS_PROFILE=homelab aws sts get-caller-identity
+```
+
+Utworzenie bucketów i migracja state bootstrapu:
+
+```bash
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap init
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap plan
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap apply
+
+cp terraform/bootstrap/backend.tf.example terraform/bootstrap/backend.tf
+AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap init -migrate-state -force-copy \
+  -backend-config="bucket=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw state_bucket_name)" \
+  -backend-config="key=bootstrap/terraform.tfstate" \
+  -backend-config="region=eu-north-1" \
+  -backend-config="use_lockfile=true"
+```
+
+Plan i instalacja Velero:
+
+```bash
+AWS_PROFILE=homelab terraform -chdir=terraform/velero init \
+  -backend-config="bucket=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw state_bucket_name)" \
+  -backend-config="key=velero/terraform.tfstate" \
+  -backend-config="region=eu-north-1" \
+  -backend-config="use_lockfile=true"
+
+AWS_PROFILE=homelab terraform -chdir=terraform/velero plan \
+  -var="backup_bucket_name=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw backup_bucket_name)"
+
+AWS_PROFILE=homelab terraform -chdir=terraform/velero apply \
+  -var="backup_bucket_name=$(AWS_PROFILE=homelab terraform -chdir=terraform/bootstrap output -raw backup_bucket_name)"
+```
+
+Utwórz klucz IAM Velero tylko raz i przekaż go potokiem bezpośrednio do Secrets Manager. Wymaga to `jq`; klucz nie jest wypisywany. Nie uruchamiaj ponownie bez sprawdzenia aktywnych kluczy, ponieważ IAM user może mieć maksymalnie dwa.
+
+```bash
+set -o pipefail
+AWS_PROFILE=homelab aws iam create-access-key \
+  --user-name "$(AWS_PROFILE=homelab terraform -chdir=terraform/velero output -raw velero_iam_user_name)" \
+  --output json \
+| jq -c '{access_key: .AccessKey.AccessKeyId, secret_access_key: .AccessKey.SecretAccessKey}' \
+| AWS_PROFILE=homelab aws secretsmanager put-secret-value \
+    --secret-id "$(AWS_PROFILE=homelab terraform -chdir=terraform/velero output -raw velero_credentials_secret_name)" \
+    --secret-string file:///dev/stdin
+```
+
+Weryfikacja Velero i lokalizacji backupu:
+
+```bash
+kubectl -n velero get pods
+kubectl -n velero get externalsecret,backupstoragelocation,schedules
+kubectl -n velero get backups
+```
+
+Jednorazowy backup i kontrola plikowych kopii PVC:
+
+```bash
+velero backup create manual-check --include-namespaces '*' \
+  --include-cluster-resources --default-volumes-to-fs-backup --ttl 720h
+velero backup describe manual-check --details
+kubectl -n velero get podvolumebackups -l velero.io/backup-name=manual-check -o wide
+```
+
+Velero kopiuje pliki PVC tylko wtedy, gdy pod ma zamontowany wolumen. PVC Garmina używa local-path, dlatego Terraform tworzy też `velero-volume-mounter` w namespace `garmin`. Backup zasobów klastra zakończył się, ale w testach z 2026-10-31 nie potwierdzono `PodVolumeBackup` dla `garmin-data`. Nie uznawaj plików Garmin za zabezpieczone, dopóki nie pojawi się ukończony PVB dla `garmin/garmin-data` i nie zostanie przetestowane odtworzenie na odizolowanym PVC. Backup plikowy czyta aktywny system plików i nie jest atomowym snapshotem SQLite.

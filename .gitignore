@@ -2,7 +2,8 @@ garmin_data/
 .venv/
 __pycache__/
 HL-NOTE.md
-**/.terraform/*
+# Terraform state and local working data must not be committed.
+**/.terraform/
 *.tfstate
 *.tfstate.*
 *.tfvars

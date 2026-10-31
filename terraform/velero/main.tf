@@ -50,9 +50,9 @@ variable "kubeconfig_path" {
 }
 
 variable "backup_schedule" {
-  description = "Harmonogram Cron w UTC. 02:17 omija uruchomienia Garmina o pełnej i połówkowej godzinie."
+  description = "Harmonogram Cron w UTC. Co 30 minut o :07 i :37, z offsetem wzgledem CronJoba Garmin."
   type        = string
-  default     = "17 2 * * *"
+  default     = "7,37 * * * *"
 }
 
 variable "backup_ttl" {

@@ -2,7 +2,7 @@
 
 Ten katalog konfiguruje dwa osobne buckety S3: zdalny stan Terraform oraz kopie Velero. Stos `bootstrap` tworzy buckety, a `velero` tworzy ograniczone uprawnienia IAM i instaluje Velero w istniejącym klastrze RKE2 przez Helm.
 
-Velero zapisuje zasoby Kubernetes ze wszystkich namespace'ów oraz zawartość wolumenów zamontowanych w podach przez file-system backup node-agent. Harmonogram to codziennie 02:17 UTC, retencja 30 dni. Nie są używane snapshoty EBS/CSI. Kopie obejmują PVC używane przez pody, nie dowolne pliki hosta ani warstwy obrazów kontenerów. Release Velero utrzymuje w namespace `garmin` mały pod `velero-volume-mounter`, który montuje PVC `garmin-data`; jest potrzebny, bo krótkotrwały CronJob Garmin zwykle nie działa w chwili backupu.
+Velero zapisuje zasoby Kubernetes ze wszystkich namespace'ów oraz zawartość wolumenów zamontowanych w podach przez file-system backup node-agent. Harmonogram to co 30 minut o :07 i :37 UTC, retencja 30 dni. Offset omija równoczesny start CronJoba Garmin o pełnej i połówkowej godzinie. Nie są używane snapshoty EBS/CSI. Kopie obejmują PVC używane przez pody, nie dowolne pliki hosta ani warstwy obrazów kontenerów. Release Velero utrzymuje w namespace `garmin` mały pod `velero-volume-mounter`, który montuje PVC `garmin-data`; jest potrzebny, bo krótkotrwały CronJob Garmin zwykle nie działa w chwili backupu.
 
 ## Wymagania
 
