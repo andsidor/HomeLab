@@ -265,10 +265,12 @@ def main():
             stats = client.get_daily_summaries(day_date, day_date)
             sleep = client.get_daily_sleep(day_date)
             heart_rate = client.get_daily_heart_rate(day_date)
+            stress = client.get_daily_stress(day_date, day_date)
             day = {
                 "stats": stats,
                 "sleep": sleep,
                 "heart_rate": heart_rate,
+                "stress": stress,
                 "steps": client.get_daily_steps(day_date, day_date),
             }
             database.execute(
