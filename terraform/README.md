@@ -12,17 +12,19 @@ Velero zapisuje zasoby Kubernetes ze wszystkich namespace'ów oraz zawartość w
 
 ## Uruchomienie
 
-Bootstrap musi utworzyć bucket, zanim można przenieść jego własny stan do S3. Pierwsze `apply` używa więc lokalnego stanu; zaraz potem migrujemy go do bucketa.
+Bootstrap musi utworzyć bucket, zanim można przenieść jego własny stan do S3. Pierwszy `apply` używa lokalnego stanu. Po utworzeniu bucketa dodajemy lokalną deklarację backendu i migrujemy state.
 
 ```bash
-terraform -chdir=terraform/bootstrap init -backend=false
+terraform -chdir=terraform/bootstrap init
+terraform -chdir=terraform/bootstrap plan
 terraform -chdir=terraform/bootstrap apply
 ```
 
-Po zatwierdzeniu planu migracja stanu bootstrap do S3:
+Po zatwierdzeniu planu i utworzeniu bucketów, z katalogu repozytorium:
 
 ```bash
-terraform -chdir=terraform/bootstrap init -migrate-state \
+cp terraform/bootstrap/backend.tf.example terraform/bootstrap/backend.tf
+terraform -chdir=terraform/bootstrap init -migrate-state -force-copy \\
   -backend-config="bucket=$(terraform -chdir=terraform/bootstrap output -raw state_bucket_name)" \
   -backend-config="key=bootstrap/terraform.tfstate" \
   -backend-config="region=eu-north-1" \
@@ -42,7 +44,30 @@ terraform -chdir=terraform/velero plan \
   -var="backup_bucket_name=$(terraform -chdir=terraform/bootstrap output -raw backup_bucket_name)"
 ```
 
-Po przejrzeniu planu wykonaj `terraform apply` z tym samym argumentem `-var`.
+Po przejrzeniu planu wykonaj `terraform apply` z tym samym argumentem `-var`. Stos utworzy dedykowanego IAM usera, politykę ograniczoną do bucketa backupowego i pusty sekret Secrets Manager. Nie tworzy klucza IAM, więc jego wartość nie trafia do Terraform state.
+
+## Dodanie klucza IAM do Secrets Manager
+
+Najpierw sprawdź nazwę usera i sekretu z outputów Terraform. Użytkownik IAM nie powinien mieć innych polityk niż ta przypięta przez ten stos.
+
+Utwórz klucz i przekaż jego dane bezpośrednio do Secrets Manager. Wymaga to `aws` CLI i `jq`; potok nie wypisuje wartości klucza na terminal:
+
+```bash
+terraform -chdir=terraform/velero output -raw velero_iam_user_name
+terraform -chdir=terraform/velero output -raw velero_credentials_secret_name
+
+aws iam create-access-key \\
+  --user-name "$(terraform -chdir=terraform/velero output -raw velero_iam_user_name)" \\
+  --output json \\
+| jq -c '{access_key: .AccessKey.AccessKeyId, secret_access_key: .AccessKey.SecretAccessKey}' \\
+| aws secretsmanager put-secret-value \\
+    --secret-id "$(terraform -chdir=terraform/velero output -raw velero_credentials_secret_name)" \\
+    --secret-string file:///dev/stdin
+```
+
+Klucz AWS używany przez External Secrets Operator (`awssm-secret`) musi mieć `secretsmanager:GetSecretValue` i `secretsmanager:DescribeSecret` dla sekretu `homelab/velero-backup`. Po zapisaniu wartości ESO zsynchronizuje ją do `velero/velero-aws-credentials`; chart Velero używa tego sekretu.
+
+Nie zapisuj Access Key ID ani Secret Access Key w plikach `.tfvars`, zmiennych Terraform, logach CI ani repozytorium. AWS pozwala mieć maksymalnie dwa aktywne klucze na IAM usera; przy rotacji dodaj nowy, zaktualizuj sekret, poczekaj na synchronizację ESO, zweryfikuj backup, a następnie dezaktywuj i usuń poprzedni klucz.
 
 Jeśli zmienisz region albo `name_prefix` w bootstrap, podaj te same wartości stosowi `velero` i odpowiednio zmień argument `region` w konfiguracji backendu.
 

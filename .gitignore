@@ -8,3 +8,4 @@ HL-NOTE.md
 *.tfvars
 *.tfplan
 crash.log
+**/backend.tf

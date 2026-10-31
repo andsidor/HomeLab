@@ -26,6 +26,12 @@ variable "backup_bucket_name" {
   type        = string
 }
 
+variable "credentials_secret_name" {
+  description = "Nazwa sekretu AWS Secrets Manager zawierającego JSON z access_key i secret_access_key."
+  type        = string
+  default     = "homelab/velero-backup"
+}
+
 variable "name_prefix" {
   description = "Prefiks nazwy dedykowanego użytkownika IAM Velero."
   type        = string
@@ -112,17 +118,23 @@ resource "aws_iam_user_policy_attachment" "velero_s3" {
   policy_arn = aws_iam_policy.velero_s3.arn
 }
 
-resource "aws_iam_access_key" "velero" {
-  user = aws_iam_user.velero.name
+resource "aws_secretsmanager_secret" "velero_credentials" {
+  name                    = var.credentials_secret_name
+  description             = "Poświadczenia dedykowanego użytkownika IAM Velero."
+  recovery_window_in_days = 7
+
+  tags = {
+    ManagedBy = "Terraform"
+    Project   = "HomeLab"
+    Purpose   = "VeleroCredentials"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 locals {
-  aws_credentials_file = join("\n", [
-    "[default]",
-    "aws_access_key_id = ${aws_iam_access_key.velero.id}",
-    "aws_secret_access_key = ${aws_iam_access_key.velero.secret}"
-  ])
-
   velero_values = {
     namespace = {
       labels = {
@@ -139,12 +151,55 @@ locals {
       }]
     }]
     credentials = {
-      useSecret = true
-      name      = "velero-aws-credentials"
-      secretContents = {
-        cloud = local.aws_credentials_file
-      }
+      useSecret      = true
+      existingSecret = "velero-aws-credentials"
     }
+    extraObjects = [{
+      apiVersion = "external-secrets.io/v1"
+      kind       = "ExternalSecret"
+      metadata = {
+        name      = "velero-aws-credentials"
+        namespace = "velero"
+      }
+      spec = {
+        refreshInterval = "1h"
+        secretStoreRef = {
+          name = "aws-secretsmanager"
+          kind = "ClusterSecretStore"
+        }
+        target = {
+          name           = "velero-aws-credentials"
+          creationPolicy = "Owner"
+          template = {
+            engineVersion = "v2"
+            type          = "Opaque"
+            data = {
+              cloud = join("\n", [
+                "[default]",
+                "aws_access_key_id = {{ \"{{\" }} .access_key {{ \"}}\" }}",
+                "aws_secret_access_key = {{ \"{{\" }} .secret_access_key {{ \"}}\" }}"
+              ])
+            }
+          }
+        }
+        data = [
+          {
+            secretKey = "access_key"
+            remoteRef = {
+              key      = aws_secretsmanager_secret.velero_credentials.name
+              property = "access_key"
+            }
+          },
+          {
+            secretKey = "secret_access_key"
+            remoteRef = {
+              key      = aws_secretsmanager_secret.velero_credentials.name
+              property = "secret_access_key"
+            }
+          }
+        ]
+      }
+    }]
     configuration = {
       backupStorageLocation = [{
         name     = "default"
@@ -199,7 +254,10 @@ resource "helm_release" "velero" {
 
   values = [yamlencode(local.velero_values)]
 
-  depends_on = [aws_iam_user_policy_attachment.velero_s3]
+  depends_on = [
+    aws_iam_user_policy_attachment.velero_s3,
+    aws_secretsmanager_secret.velero_credentials
+  ]
 }
 
 output "velero_backup_bucket" {
@@ -210,4 +268,14 @@ output "velero_backup_bucket" {
 output "velero_schedule" {
   description = "Codzienny harmonogram kopii w UTC."
   value       = var.backup_schedule
+}
+
+output "velero_iam_user_name" {
+  description = "Dedykowany IAM user Velero."
+  value       = aws_iam_user.velero.name
+}
+
+output "velero_credentials_secret_name" {
+  description = "Sekret AWS Secrets Manager do wypełnienia kluczem IAM Velero."
+  value       = aws_secretsmanager_secret.velero_credentials.name
 }
