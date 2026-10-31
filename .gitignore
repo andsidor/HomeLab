@@ -2,3 +2,9 @@ garmin_data/
 .venv/
 __pycache__/
 HL-NOTE.md
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfplan
+crash.log
