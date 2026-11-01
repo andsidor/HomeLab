@@ -82,7 +82,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 
 - **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
-- **Argo CD** is reachable at `https://argocd.andrzejsidor.uk` through Traefik TLS passthrough. cert-manager issues its server certificate from an internal HomeLab CA; add a local DNS record to `192.168.0.202` and trust the CA root certificate on client devices.
+- **Argo CD** is reachable at `https://argocd.andrzejsidor.uk` through Traefik (`192.168.0.202`) or directly at `https://192.168.0.203`. cert-manager issues both DNS and IP SANs from an internal HomeLab CA; trust the CA root certificate on client devices.
 - **Istio** control plane runs in `istio-system`; no workloads are automatically injected, and no Istio gateway is installed. Traefik remains the ingress controller.
 - **Argo Rollouts** is installed in namespace `argo-rollouts` with its CRDs. Existing Deployments are unchanged; progressive delivery starts when an application is migrated to a `Rollout` resource.
 - **cert-manager** is installed with its CRDs. No `Issuer` or `ClusterIssuer` is configured yet, so certificate issuance needs a separate ACME/provider configuration.
@@ -350,7 +350,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 
 - **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
-- **Argo CD** jest dostępne pod `https://argocd.andrzejsidor.uk` przez TLS passthrough Traefika. cert-manager wystawia certyfikat serwera z wewnętrznego CA HomeLab; dodaj lokalny rekord DNS wskazujący `192.168.0.202` i zaufaj certyfikatowi root CA na urządzeniach klienckich.
+- **Argo CD** jest dostępne pod `https://argocd.andrzejsidor.uk` przez Traefika (`192.168.0.202`) albo bezpośrednio pod `https://192.168.0.203`. cert-manager wystawia SAN dla nazwy DNS i IP z wewnętrznego CA HomeLab; zaufaj certyfikatowi root CA na urządzeniach klienckich.
 - **Istio** działa jako control plane w namespace `istio-system`; sidecar injection nie jest włączony automatycznie, nie instalowano też gatewaya Istio. Kontrolerem Ingress pozostaje Traefik.
 - **Argo Rollouts** jest zainstalowany w namespace `argo-rollouts` razem z CRD. Istniejące Deploymenty pozostają bez zmian; wdrożenia progresywne wymagają migracji aplikacji do zasobu `Rollout`.
 - **cert-manager** jest zainstalowany razem z CRD. Nie skonfigurowano jeszcze `Issuer` ani `ClusterIssuer`; wystawianie certyfikatów wymaga osobnej konfiguracji ACME/dostawcy.

@@ -35,6 +35,8 @@ spec:
   commonName: argocd.andrzejsidor.uk
   dnsNames:
     - argocd.andrzejsidor.uk
+  ipAddresses:
+    - 192.168.0.203
   duration: 2160h
   renewBefore: 360h
   privateKey:
