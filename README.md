@@ -44,6 +44,7 @@ flowchart LR
 | External Secrets Operator | Syncs secrets from AWS Secrets Manager. |
 | cert-manager | Manages TLS certificates for Kubernetes resources. |
 | Traefik | Ingress controller exposed through MetalLB. |
+| Istio | Service mesh control plane; workloads opt in to sidecar injection individually. |
 | Prometheus and Grafana | Metrics collection and dashboards. |
 | Terraform | Manages AWS backup resources and installs Velero in the existing RKE2 cluster. |
 | Velero | Backs up Kubernetes resources and mounted PVC data to Amazon S3. |
@@ -81,6 +82,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 
 - **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
+- **Istio** control plane runs in `istio-system`; no workloads are automatically injected, and no Istio gateway is installed. Traefik remains the ingress controller.
 - **Argo Rollouts** is installed in namespace `argo-rollouts` with its CRDs. Existing Deployments are unchanged; progressive delivery starts when an application is migrated to a `Rollout` resource.
 - **cert-manager** is installed with its CRDs. No `Issuer` or `ClusterIssuer` is configured yet, so certificate issuance needs a separate ACME/provider configuration.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads `renovate-app-id`, `renovate-app-installation-id` and `renovate-app-private-key` from `homelab/secrets` in AWS Secrets Manager.
@@ -309,6 +311,7 @@ flowchart LR
 | External Secrets Operator | Synchronizacja sekretów z AWS Secrets Manager. |
 | cert-manager | Zarządzanie certyfikatami TLS dla zasobów Kubernetes. |
 | Traefik | Kontroler Ingress udostępniony przez MetalLB. |
+| Istio | Control plane service mesh; workloady dołączają do sidecar injection indywidualnie. |
 | Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
 | Terraform | Zarządzanie zasobami AWS do backupu i instalacja Velero w istniejącym klastrze RKE2. |
 | Velero | Backup zasobów Kubernetes i danych zamontowanych PVC do Amazon S3. |
@@ -346,6 +349,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 
 - **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
+- **Istio** działa jako control plane w namespace `istio-system`; sidecar injection nie jest włączony automatycznie, nie instalowano też gatewaya Istio. Kontrolerem Ingress pozostaje Traefik.
 - **Argo Rollouts** jest zainstalowany w namespace `argo-rollouts` razem z CRD. Istniejące Deploymenty pozostają bez zmian; wdrożenia progresywne wymagają migracji aplikacji do zasobu `Rollout`.
 - **cert-manager** jest zainstalowany razem z CRD. Nie skonfigurowano jeszcze `Issuer` ani `ClusterIssuer`; wystawianie certyfikatów wymaga osobnej konfiguracji ACME/dostawcy.
 - **Renovate** działa w namespace `renovate` w każdy poniedziałek o 06:00 czasu Europe/Warsaw i otwiera PR-y dla `andsidor/HomeLab`. External Secrets pobiera z AWS `homelab/secrets` pola `renovate-app-id`, `renovate-app-installation-id` i `renovate-app-private-key`.

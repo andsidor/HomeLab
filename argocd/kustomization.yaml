@@ -14,3 +14,4 @@ resources:
   - infrastrucure/cert-manager.yaml
   - infrastrucure/traefik.yaml
   - infrastrucure/argo-rollouts.yaml
+  - infrastrucure/istio.yaml
