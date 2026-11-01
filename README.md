@@ -95,6 +95,18 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **Garmin** runs as a CronJob every 30 minutes. The Personal API key is synced from AWS by ESO, data goes to SQLite on a PVC, and metrics are pushed to the Pushgateway.
 - **Velero** runs in namespace `velero`. It backs up cluster resources and pod-mounted PVC data to S3 every 30 minutes at :07 and :37 UTC, with 7-day retention. File-system backup uses the node-agent; CSI/EBS snapshots are disabled because the cluster uses local-path volumes.
 
+## Screenshots / Zrzuty ekranu
+
+Operational snapshots captured on 2026-11-01; Argo CD statuses and Grafana values change over time. The Secrets Manager image shows names and descriptions only, not secret values. / Zrzuty stanu z 2026-11-01; statusy Argo CD i wartości Grafany zmieniają się w czasie. Obraz Secrets Manager pokazuje tylko nazwy i opisy, bez wartości sekretów.
+
+![AWS Secrets Manager inventory / Lista sekretów AWS Secrets Manager](secret.jpg)
+
+![Argo CD applications / Aplikacje Argo CD](argo.jpg)
+
+![Terraform and Velero S3 buckets / Buckety S3 Terraform i Velero](s3.jpg)
+
+![Grafana Zigbee dashboard / Dashboard Zigbee w Grafanie](grafana.jpg)
+
 ## Notes and commands
 
 Debugging commands and lessons learned are collected in [HL-NOTE.md](HL-NOTE.md) (Polish and English sections). Never commit secrets or tokens; keep them in AWS Secrets Manager.
