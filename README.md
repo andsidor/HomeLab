@@ -36,6 +36,7 @@ flowchart LR
 | --- | --- |
 | Kubernetes / RKE2 | Runs the cluster services. |
 | Argo CD | GitOps and automatic sync of applications from the repository. |
+| Argo Rollouts | Progressive delivery controller for Kubernetes Rollout resources. |
 | Renovate | Checks dependencies weekly and opens GitHub pull requests; runs as a Kubernetes CronJob. |
 | Kustomize | Composes Kubernetes manifests. |
 | MetalLB | Exposes `LoadBalancer` services on the LAN. |
@@ -80,6 +81,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 
 - **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
+- **Argo Rollouts** is installed in namespace `argo-rollouts` with its CRDs. Existing Deployments are unchanged; progressive delivery starts when an application is migrated to a `Rollout` resource.
 - **cert-manager** is installed with its CRDs. No `Issuer` or `ClusterIssuer` is configured yet, so certificate issuance needs a separate ACME/provider configuration.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads `renovate-app-id`, `renovate-app-installation-id` and `renovate-app-private-key` from `homelab/secrets` in AWS Secrets Manager.
 - **Prometheus** keeps metrics for 90 days on a persistent volume (`local-path-retain` class, 10Gi).
@@ -299,6 +301,7 @@ flowchart LR
 | --- | --- |
 | Kubernetes / RKE2 | Uruchamianie usług klastra; instrukcje instalacji znajdują się niżej. |
 | Argo CD | GitOps i automatyczna synchronizacja aplikacji z repozytorium. |
+| Argo Rollouts | Kontroler wdrożeń progresywnych dla zasobów Kubernetes `Rollout`. |
 | Renovate | Cotygodniowo sprawdza zależności i otwiera pull requesty GitHuba; działa jako Kubernetes CronJob. |
 | Kustomize | Składanie manifestów Kubernetes. |
 | MetalLB | Udostępnianie usług typu `LoadBalancer` w sieci LAN. |
@@ -343,6 +346,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 
 - **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
+- **Argo Rollouts** jest zainstalowany w namespace `argo-rollouts` razem z CRD. Istniejące Deploymenty pozostają bez zmian; wdrożenia progresywne wymagają migracji aplikacji do zasobu `Rollout`.
 - **cert-manager** jest zainstalowany razem z CRD. Nie skonfigurowano jeszcze `Issuer` ani `ClusterIssuer`; wystawianie certyfikatów wymaga osobnej konfiguracji ACME/dostawcy.
 - **Renovate** działa w namespace `renovate` w każdy poniedziałek o 06:00 czasu Europe/Warsaw i otwiera PR-y dla `andsidor/HomeLab`. External Secrets pobiera z AWS `homelab/secrets` pola `renovate-app-id`, `renovate-app-installation-id` i `renovate-app-private-key`.
 - **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).

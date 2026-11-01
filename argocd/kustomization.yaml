@@ -13,3 +13,4 @@ resources:
   - infrastrucure/external-secrets-namespace.yaml
   - infrastrucure/cert-manager.yaml
   - infrastrucure/traefik.yaml
+  - infrastrucure/argo-rollouts.yaml
