@@ -184,7 +184,10 @@ The `aws-secretsmanager` `ClusterSecretStore` connects ESO to AWS Secrets Manage
 
 Use IAM keys with `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret`, restricted to the ARNs of the required secrets in `eu-north-1`. With a custom KMS key also add a restricted `kms:Decrypt`. After syncing, check the store with `kubectl get clustersecretstore aws-secretsmanager`.
 
-Secret keys used in `homelab/secrets`: `garmin-api`, `mqtt-user`, `mqtt-password`, `cloudflared-token`.
+Secrets Manager inventory (names only; never document secret values):
+- `homelab/secrets` contains workload values for Garmin, MQTT, Cloudflare Tunnel and the Renovate GitHub App (`renovate-app-id`, `renovate-app-installation-id`, `renovate-app-private-key`).
+- `homelab/velero-backup` contains the dedicated Velero IAM user's credentials.
+- `homelab/rke2-etcd-backup` contains credentials for RKE2 etcd snapshots in S3.
 
 Notes:
 - Do not commit secrets (use Sealed Secrets / SOPS / External Secrets).
@@ -193,7 +196,7 @@ Notes:
 
 ## Terraform and Velero (AWS)
 
-Terraform manages two separate S3 buckets: one for remote Terraform state and one for Velero backups. Both use encryption, versioning, public access blocking, and a TLS-only bucket policy. Terraform state is locked with S3 lockfiles. Do not commit `terraform.tfstate`, `.terraform/`, plan files, or credentials.
+Terraform manages two separate S3 buckets in `eu-north-1`: `homelab-sidor-tfstate-265d7dd5` for remote state and `homelab-sidor-velero-265d7dd5` for Velero backups. Both use encryption, versioning, public access blocking, and a TLS-only bucket policy. Terraform state is locked with S3 lockfiles. Do not commit `terraform.tfstate`, `.terraform/`, plan files, or credentials.
 
 The bootstrap stack first creates the buckets using a local state, then migrates its state to S3. The Velero stack uses a separate key in the state bucket. AWS access for Terraform uses IAM Identity Center; the dedicated IAM user `homelab-sidor-velero-backup` has access only to the backup bucket. Its key is stored in Secrets Manager (`homelab/velero-backup`) and synced to namespace `velero` by External Secrets. The key value is not stored in Terraform state.
 
@@ -464,6 +467,11 @@ Panel będzie dostępny pod `http://localhost:3000`. AWS secret `homelab/monitor
 
 Użyj kluczy IAM z uprawnieniami `secretsmanager:GetSecretValue` i `secretsmanager:DescribeSecret`, ograniczonymi do ARN potrzebnych sekretów w `eu-north-1`. Przy własnym kluczu KMS dodaj także ograniczone `kms:Decrypt`. Po synchronizacji sprawdź store: `kubectl get clustersecretstore aws-secretsmanager`.
 
+Sekrety w Secrets Manager (same nazwy; nigdy nie dokumentuj ich wartości):
+- `homelab/secrets` zawiera dane workloadów Garmin, MQTT, Cloudflare Tunnel i GitHub App Renovate (`renovate-app-id`, `renovate-app-installation-id`, `renovate-app-private-key`).
+- `homelab/velero-backup` zawiera poświadczenia dedykowanego użytkownika IAM dla Velero.
+- `homelab/rke2-etcd-backup` zawiera poświadczenia do zapisu snapshotów etcd RKE2 w S3.
+
 `k8s/garmin-app/cronjob.yaml` pobiera dane z Garmin Connect Personal API; klucz pochodzi z AWS przez ESO, a SQLite i cache bearer tokenu są przechowywane na PVC.
 
 Uwagi:
@@ -473,7 +481,7 @@ Uwagi:
 
 ## Terraform i Velero (AWS)
 
-Terraform zarządza dwoma osobnymi bucketami S3: jednym na zdalny state Terraform i drugim na backupy Velero. Oba mają szyfrowanie, wersjonowanie, blokadę publicznego dostępu i politykę wymuszającą TLS. Blokada state używa S3 lockfiles. Nie commituj `terraform.tfstate`, `.terraform/`, planów ani credentiali.
+Terraform zarządza dwoma osobnymi bucketami S3 w `eu-north-1`: `homelab-sidor-tfstate-265d7dd5` przechowuje zdalny state, a `homelab-sidor-velero-265d7dd5` backupy Velero. Oba mają szyfrowanie, wersjonowanie, blokadę publicznego dostępu i politykę wymuszającą TLS. Blokada state używa S3 lockfiles. Nie commituj `terraform.tfstate`, `.terraform/`, planów ani credentiali.
 
 Stos bootstrap najpierw tworzy buckety z lokalnym state, a następnie migruje state do S3. Stos Velero używa osobnego klucza w bucketcie state. Terraform loguje się przez IAM Identity Center. Dedykowany IAM user `homelab-sidor-velero-backup` ma dostęp tylko do bucketa backupowego. Jego klucz jest zapisany w Secrets Manager (`homelab/velero-backup`) i synchronizowany przez External Secrets do namespace `velero`; wartość klucza nie trafia do Terraform state.
 
