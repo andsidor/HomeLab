@@ -10,3 +10,5 @@ resources:
   - infrastrucure/prometheus.yaml
   - infrastrucure/external-secrets.yaml
   - infrastrucure/external-secrets-namespace.yaml
+  - infrastrucure/cert-manager.yaml
+  - infrastrucure/traefik.yaml

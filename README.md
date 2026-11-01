@@ -40,6 +40,8 @@ flowchart LR
 | MetalLB | Exposes `LoadBalancer` services on the LAN. |
 | Rancher Local Path Provisioner | Local volumes for applications. |
 | External Secrets Operator | Syncs secrets from AWS Secrets Manager. |
+| cert-manager | Manages TLS certificates for Kubernetes resources. |
+| Traefik | Ingress controller exposed through MetalLB. |
 | Prometheus and Grafana | Metrics collection and dashboards. |
 | Terraform | Manages AWS backup resources and installs Velero in the existing RKE2 cluster. |
 | Velero | Backs up Kubernetes resources and mounted PVC data to Amazon S3. |
@@ -76,6 +78,8 @@ The root Application watches the `argocd/` directory. To add a new application, 
 ## Services
 
 - **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastrucure/grafana.yaml`.
+- **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
+- **cert-manager** is installed with its CRDs. No `Issuer` or `ClusterIssuer` is configured yet, so certificate issuance needs a separate ACME/provider configuration.
 - **Prometheus** keeps metrics for 90 days on a persistent volume (`local-path-retain` class, 10Gi).
 - **Zigbee2MQTT** runs on the `debian` node with a Sonoff dongle, and its UI is exposed through MetalLB at `192.168.0.201:8080`. Readings go to the **Mosquitto** MQTT broker on topic `zigbee2mqtt/<device>`, and `mqtt2prometheus` exposes them to Prometheus.
 - **MQTT credentials** (`mqtt-user`, `mqtt-password`) live in AWS Secrets Manager (`homelab/secrets`) and reach the cluster as the `mqtt-credentials` secret; anonymous access is disabled.
@@ -297,6 +301,8 @@ flowchart LR
 | MetalLB | Udostępnianie usług typu `LoadBalancer` w sieci LAN. |
 | Rancher Local Path Provisioner | Lokalne wolumeny dla aplikacji. |
 | External Secrets Operator | Synchronizacja sekretów z AWS Secrets Manager. |
+| cert-manager | Zarządzanie certyfikatami TLS dla zasobów Kubernetes. |
+| Traefik | Kontroler Ingress udostępniony przez MetalLB. |
 | Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
 | Terraform | Zarządzanie zasobami AWS do backupu i instalacja Velero w istniejącym klastrze RKE2. |
 | Velero | Backup zasobów Kubernetes i danych zamontowanych PVC do Amazon S3. |
@@ -333,6 +339,8 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 ## Usługi
 
 - **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastrucure/grafana.yaml`.
+- **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
+- **cert-manager** jest zainstalowany razem z CRD. Nie skonfigurowano jeszcze `Issuer` ani `ClusterIssuer`; wystawianie certyfikatów wymaga osobnej konfiguracji ACME/dostawcy.
 - **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).
 - **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
 - **Cloudflare Tunnel** łączy klaster z Cloudflare przez token z AWS; trasa publiczna wskazuje na Grafanę, a dostęp warto chronić przez Cloudflare Access.
