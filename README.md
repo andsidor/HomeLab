@@ -65,6 +65,7 @@ flowchart LR
 | `k8s/garmin-app/` | CronJob, PVC and secret configuration of the Garmin app. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, the `mqtt2prometheus` exporter and MQTT credentials. |
 | `k8s/cloudflared/` | Cloudflare tunnel and the token secret pulled from AWS. |
+| `k8s/argocd-access/` | Internal CA, Argo CD TLS certificate and direct MetalLB service. |
 | `terraform/` | S3 buckets, remote Terraform state, Velero IAM credentials, and Helm release. |
 | `garmin_app.py` | Fetches and stores Garmin data and publishes metrics. |
 
@@ -85,7 +86,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **Argo CD** is reachable at `https://argocd.andrzejsidor.uk` through Traefik (`192.168.0.202`) or directly at `https://192.168.0.203`. cert-manager issues both DNS and IP SANs from an internal HomeLab CA; trust the CA root certificate on client devices.
 - **Istio** control plane runs in `istio-system`; no workloads are automatically injected, and no Istio gateway is installed. Traefik remains the ingress controller.
 - **Argo Rollouts** is installed in namespace `argo-rollouts` with its CRDs. Existing Deployments are unchanged; progressive delivery starts when an application is migrated to a `Rollout` resource.
-- **cert-manager** is installed with its CRDs. No `Issuer` or `ClusterIssuer` is configured yet, so certificate issuance needs a separate ACME/provider configuration.
+- **cert-manager** is installed with its CRDs and issues Argo CD's certificate from the internal `homelab-internal-ca` ClusterIssuer. No public ACME issuer is configured.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads `renovate-app-id`, `renovate-app-installation-id` and `renovate-app-private-key` from `homelab/secrets` in AWS Secrets Manager.
 - **Prometheus** keeps metrics for 90 days on a persistent volume (`local-path-retain` class, 10Gi).
 - **Zigbee2MQTT** runs on the `debian` node with a Sonoff dongle, and its UI is exposed through MetalLB at `192.168.0.201:8080`. Readings go to the **Mosquitto** MQTT broker on topic `zigbee2mqtt/<device>`, and `mqtt2prometheus` exposes them to Prometheus.
@@ -333,6 +334,7 @@ flowchart LR
 | `k8s/garmin-app/` | CronJob, PVC i konfiguracja sekretu aplikacji Garmin. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, eksporter `mqtt2prometheus` i dane logowania MQTT. |
 | `k8s/cloudflared/` | Tunel Cloudflare i sekret z tokenem pobierany z AWS. |
+| `k8s/argocd-access/` | Wewnętrzny CA, certyfikat TLS Argo CD i bezpośrednia usługa MetalLB. |
 | `terraform/` | Buckety S3, zdalny state Terraform, uprawnienia Velero i release Helm. |
 | `garmin_app.py` | Pobieranie i zapisywanie danych Garmin oraz publikowanie metryk. |
 
@@ -353,7 +355,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **Argo CD** jest dostępne pod `https://argocd.andrzejsidor.uk` przez Traefika (`192.168.0.202`) albo bezpośrednio pod `https://192.168.0.203`. cert-manager wystawia SAN dla nazwy DNS i IP z wewnętrznego CA HomeLab; zaufaj certyfikatowi root CA na urządzeniach klienckich.
 - **Istio** działa jako control plane w namespace `istio-system`; sidecar injection nie jest włączony automatycznie, nie instalowano też gatewaya Istio. Kontrolerem Ingress pozostaje Traefik.
 - **Argo Rollouts** jest zainstalowany w namespace `argo-rollouts` razem z CRD. Istniejące Deploymenty pozostają bez zmian; wdrożenia progresywne wymagają migracji aplikacji do zasobu `Rollout`.
-- **cert-manager** jest zainstalowany razem z CRD. Nie skonfigurowano jeszcze `Issuer` ani `ClusterIssuer`; wystawianie certyfikatów wymaga osobnej konfiguracji ACME/dostawcy.
+- **cert-manager** jest zainstalowany razem z CRD i wystawia certyfikat Argo CD przez wewnętrzny ClusterIssuer `homelab-internal-ca`. Publiczny issuer ACME nie jest skonfigurowany.
 - **Renovate** działa w namespace `renovate` w każdy poniedziałek o 06:00 czasu Europe/Warsaw i otwiera PR-y dla `andsidor/HomeLab`. External Secrets pobiera z AWS `homelab/secrets` pola `renovate-app-id`, `renovate-app-installation-id` i `renovate-app-private-key`.
 - **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).
 - **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
