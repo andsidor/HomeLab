@@ -5,6 +5,7 @@ resources:
   - applications/zigbee2mqtt.yaml
   - applications/cloudflared.yaml
   - applications/renovate.yaml
+  - applications/argocd-access.yaml
   - infrastrucure/metallb.yaml
   - infrastrucure/local-path-provisioner.yaml
   - infrastrucure/grafana.yaml
