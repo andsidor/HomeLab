@@ -29,6 +29,9 @@ metadata:
   namespace: argocd
 spec:
   secretName: argocd-server-tls
+  secretTemplate:
+    labels:
+      app.kubernetes.io/part-of: argocd
   commonName: argocd.andrzejsidor.uk
   dnsNames:
     - argocd.andrzejsidor.uk
