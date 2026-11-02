@@ -61,7 +61,7 @@ flowchart LR
 | `argocd/root-app.yaml` | Main Argo CD "app of apps" Application. |
 | `argocd/kustomization.yaml` | List of applications and infrastructure managed by Argo CD. |
 | `argocd/applications/` | Application definitions deployed from this repository. |
-| `argocd/infrastrucure/` | Cluster services and infrastructure configuration. |
+| `argocd/infrastructure/` | Cluster services and infrastructure configuration. |
 | `k8s/garmin-app/` | CronJob, PVC and secret configuration of the Garmin app. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, the `mqtt2prometheus` exporter and MQTT credentials. |
 | `k8s/cloudflared/` | Cloudflare tunnel and the token secret pulled from AWS. |
@@ -77,11 +77,11 @@ Once the cluster and Argo CD are ready, start the root application:
 kubectl apply -f argocd/root-app.yaml
 ```
 
-The root Application watches the `argocd/` directory. To add a new application, put its manifest in `argocd/applications/` or `argocd/infrastrucure/` and list it in `argocd/kustomization.yaml`; without that entry Argo CD will not deploy it. Argo CD syncs changes from `main` automatically, removes resources deleted from the configuration (`prune`) and corrects manual drift (`selfHeal`).
+The root Application watches the `argocd/` directory. To add a new application, put its manifest in `argocd/applications/` or `argocd/infrastructure/` and list it in `argocd/kustomization.yaml`; without that entry Argo CD will not deploy it. Argo CD syncs changes from `main` automatically, removes resources deleted from the configuration (`prune`) and corrects manual drift (`selfHeal`).
 
 ## Services
 
-- **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastrucure/grafana.yaml`.
+- **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastructure/grafana.yaml`.
 - **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
 - **Argo CD** is reachable at `https://argocd.andrzejsidor.uk` through Traefik (`192.168.0.202`) or directly at `https://192.168.0.203`. cert-manager issues both DNS and IP SANs from an internal HomeLab CA; trust the CA root certificate on client devices.
 - **Istio and Kiali** run in `istio-system`; workloads are not automatically injected and no Istio gateway is installed. Open Kiali at `http://192.168.0.204:20001`. Traefik remains the ingress controller.
@@ -180,7 +180,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 kubectl -n argocd port-forward svc/argocd-server 8080:443
 ```
 
-Add a new application as an `Application` manifest in `argocd/applications/` or `argocd/infrastrucure/`, then list its path in `argocd/kustomization.yaml`. In the manifest set `repoURL` to `https://github.com/andsidor/HomeLab.git` and `path` to the Kustomize directory. Start once with `kubectl apply -f argocd/root-app.yaml`; the root app deploys further applications after their manifests are added to Kustomize and pushed to Git.
+Add a new application as an `Application` manifest in `argocd/applications/` or `argocd/infrastructure/`, then list its path in `argocd/kustomization.yaml`. In the manifest set `repoURL` to `https://github.com/andsidor/HomeLab.git` and `path` to the Kustomize directory. Start once with `kubectl apply -f argocd/root-app.yaml`; the root app deploys further applications after their manifests are added to Kustomize and pushed to Git.
 
 Grafana (Helm chart in Argo CD) uses the existing Kubernetes secret `grafana-admin-local` (keys `admin-user` and `admin-password`). Access it with:
 
@@ -347,7 +347,7 @@ flowchart LR
 | `argocd/root-app.yaml` | Główna aplikacja Argo CD typu „app of apps”. |
 | `argocd/kustomization.yaml` | Lista aplikacji i elementów infrastruktury zarządzanych przez Argo CD. |
 | `argocd/applications/` | Definicje aplikacji wdrażanych z tego repozytorium. |
-| `argocd/infrastrucure/` | Konfiguracja usług i infrastruktury klastra. |
+| `argocd/infrastructure/` | Konfiguracja usług i infrastruktury klastra. |
 | `k8s/garmin-app/` | CronJob, PVC i konfiguracja sekretu aplikacji Garmin. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, eksporter `mqtt2prometheus` i dane logowania MQTT. |
 | `k8s/cloudflared/` | Tunel Cloudflare i sekret z tokenem pobierany z AWS. |
@@ -363,11 +363,11 @@ Po przygotowaniu klastra i Argo CD uruchom główną aplikację:
 kubectl apply -f argocd/root-app.yaml
 ```
 
-Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dodania jej manifestu do `argocd/applications/` lub `argocd/infrastrucure/` i dopisania go do `argocd/kustomization.yaml`. Argo CD automatycznie synchronizuje zmiany z gałęzi `main`, w tym usuwa zasoby usunięte z konfiguracji (`prune`) i koryguje ręczne rozbieżności (`selfHeal`).
+Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dodania jej manifestu do `argocd/applications/` lub `argocd/infrastructure/` i dopisania go do `argocd/kustomization.yaml`. Argo CD automatycznie synchronizuje zmiany z gałęzi `main`, w tym usuwa zasoby usunięte z konfiguracji (`prune`) i koryguje ręczne rozbieżności (`selfHeal`).
 
 ## Usługi
 
-- **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastrucure/grafana.yaml`.
+- **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastructure/grafana.yaml`.
 - **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
 - **Argo CD** jest dostępne pod `https://argocd.andrzejsidor.uk` przez Traefika (`192.168.0.202`) albo bezpośrednio pod `https://192.168.0.203`. cert-manager wystawia SAN dla nazwy DNS i IP z wewnętrznego CA HomeLab; zaufaj certyfikatowi root CA na urządzeniach klienckich.
 - **Istio i Kiali** działają w namespace `istio-system`; workloads nie są automatycznie wstrzykiwane, a gateway Istio nie jest zainstalowany. Panel Kiali jest dostępny pod `http://192.168.0.204:20001`; logowanie odbywa się tokenem Kubernetes. Kontrolerem Ingress pozostaje Traefik.
@@ -454,7 +454,7 @@ kubectl -n argocd port-forward svc/argocd-server 8080:443
 ```
 
 Nową aplikację dodaj jako manifest `Application` w `argocd/applications/`
-albo `argocd/infrastrucure/`, a następnie dopisz jej ścieżkę do
+albo `argocd/infrastructure/`, a następnie dopisz jej ścieżkę do
 `argocd/kustomization.yaml`. W manifeście ustaw `repoURL` na
 `https://github.com/andsidor/HomeLab.git` i `path` na katalog z Kustomize.
 
@@ -462,7 +462,7 @@ Struktura w repo:
 - `argocd/root-app.yaml` - Application "app of apps", obserwuje `argocd/`
 - `argocd/kustomization.yaml` - lista aplikacji oraz elementów infrastruktury zarządzanych przez root app
 - `argocd/applications/` - po jednym Application na aplikację
-- `argocd/infrastrucure/` - aplikacje i konfiguracja elementów klastra
+- `argocd/infrastructure/` - aplikacje i konfiguracja elementów klastra
 - `k8s/<app>/` - manifesty (Kustomize)
 
 Start (raz): `kubectl apply -f argocd/root-app.yaml`; kolejne aplikacje wdroży root app po dodaniu manifestu do Kustomize i wysłaniu zmian do Gita.
