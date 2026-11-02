@@ -2,6 +2,10 @@
 
 English | [Polski](#homelab-wersja-polska)
 
+[![My Skills](https://skillicons.dev/icons?i=kubernetes,aws,docker,vim,bash,git,github,terraform,python,typescript,nodejs,gpt&theme=light)](https://skillicons.dev)
+
+**Also comfortable with**: SQL (Postgres, SQLite), CI/CD pipelines, Networking and Security (VPC, IAM), ChatGPT, Claude
+
 ## Overview
 
 This repository describes a home Kubernetes (RKE2) environment managed declaratively with GitOps. Argo CD watches the `main` branch, deploys applications from Kustomize manifests and keeps the cluster in sync with the repository.
