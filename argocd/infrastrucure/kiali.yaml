@@ -22,8 +22,8 @@ spec:
         external_services:
           grafana:
             enabled: true
-            in_cluster_url: http://grafana.monitoring.svc.cluster.local:80
-            url: http://192.168.0.200
+            internal_url: http://grafana.monitoring.svc.cluster.local:80
+            external_url: http://192.168.0.200
           istio:
             root_namespace: istio-system
           prometheus:
