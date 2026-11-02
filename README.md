@@ -2,7 +2,7 @@
 
 English | [Polski](#homelab-wersja-polska)
 
-[![My Skills](https://skillicons.dev/icons?i=kubernetes,aws,docker,vim,bash,git,github,terraform,python,typescript,nodejs,gpt&theme=light)](https://skillicons.dev)
+[![My Skills](https://skillicons.dev/icons?i=kubernetes,aws,docker,vim,bash,git,github,terraform,python,js,gpt&theme=light)](https://skillicons.dev)
 
 **Also comfortable with**: SQL (Postgres, SQLite), CI/CD pipelines, Networking and Security (VPC, IAM), ChatGPT, Claude
 
@@ -148,12 +148,12 @@ git add . && git commit -m "message" && git push -u origin main
 
 - `codeql` - Python code analysis
 - `python-security` - `bandit -r garmin_app.py`, `pip-audit -r requirements.txt`
-- `docker` - build, Trivy (SARIF + gate on CRITICAL only), push to `ghcr.io/andsidor/homelab`
+- `docker` - build, non-blocking Trivy SARIF scan for `CRITICAL` and `HIGH`, push to `ghcr.io/andsidor/homelab`
 
 Notes:
-- Actions use Node 24 versions (checkout v7, setup-python v7, codeql v4, docker/* v4-v7).
+- Actions use Node 24-compatible versions (checkout v7, setup-python v7, codeql v4, docker/* v4-v7, `create-github-app-token` v3.3.0).
 - `aquasecurity/trivy-action` tags have a `v` prefix (e.g. `v0.36.0`).
-- HIGH vulnerabilities do not block the build; they are visible in the Security tab.
+- Trivy findings are uploaded as SARIF and appear in the Security tab. The CRITICAL blocking gate is currently commented out, so findings do not fail the build.
 - Minimum required versions: `urllib3>=2.8.0`, `msgpack>=1.2.1`, `setuptools>=78.1.1` (in the Dockerfile).
 
 ## RKE2
@@ -421,12 +421,12 @@ git add . && git commit -m "opis" && git push -u origin main
 
 - `codeql` - analiza kodu Pythona
 - `python-security` - `bandit -r garmin_app.py`, `pip-audit -r requirements.txt`
-- `docker` - build, Trivy (SARIF + bramka tylko na CRITICAL), push do `ghcr.io/andsidor/homelab`
+- `docker` - build, nieblokujący skan Trivy SARIF dla `CRITICAL` i `HIGH`, push do `ghcr.io/andsidor/homelab`
 
 Notatki:
-- Akcje w wersjach Node 24 (checkout v7, setup-python v7, codeql v4, docker/* v4-v7).
+- Akcje zgodne z Node 24 (checkout v7, setup-python v7, codeql v4, docker/* v4-v7, `create-github-app-token` v3.3.0).
 - Tagi `aquasecurity/trivy-action` mają prefiks `v` (np. `v0.36.0`).
-- Podatności HIGH nie blokują builda, są widoczne w zakładce Security.
+- Wyniki Trivy trafiają jako SARIF do zakładki Security. Blokująca bramka CRITICAL jest obecnie zakomentowana, więc podatności nie przerywają builda.
 - Wymagane minimalne wersje: `urllib3>=2.8.0`, `msgpack>=1.2.1`, `setuptools>=78.1.1` (w Dockerfile).
 
 ## RKE2
