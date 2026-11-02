@@ -38,25 +38,25 @@ flowchart LR
 
 | Technology | Purpose |
 | --- | --- |
-| Kubernetes / RKE2 | Runs the cluster services. |
-| Argo CD | GitOps and automatic sync of applications from the repository. |
-| Argo Rollouts | Progressive delivery controller for Kubernetes Rollout resources. |
-| Renovate | Checks dependencies weekly and opens GitHub pull requests; runs as a Kubernetes CronJob. |
-| Kustomize | Composes Kubernetes manifests. |
-| MetalLB | Exposes `LoadBalancer` services on the LAN. |
-| Rancher Local Path Provisioner | Local volumes for applications. |
-| External Secrets Operator | Syncs secrets from AWS Secrets Manager. |
-| cert-manager | Manages TLS certificates for Kubernetes resources. |
-| Traefik | Ingress controller exposed through MetalLB. |
-| Istio | Service mesh control plane; workloads opt in to sidecar injection individually. |
-| Prometheus and Grafana | Metrics collection and dashboards. |
-| Terraform | Manages AWS backup resources and installs Velero in the existing RKE2 cluster. |
-| Velero | Backs up Kubernetes resources and mounted PVC data to Amazon S3. |
-| Python and Garmin Connect Personal API | Fetches Garmin data, stores it in SQLite and publishes metrics. |
-| Zigbee2MQTT | Handles Zigbee sensors through a Sonoff USB dongle and publishes readings to MQTT. |
-| Mosquitto (MQTT) | MQTT broker with authentication; credentials come from AWS through ESO. |
-| mqtt2prometheus | Converts MQTT readings into Prometheus metrics. |
-| Cloudflare Tunnel (`cloudflared`) | Remote access to Grafana without opening router ports. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Kubernetes / RKE2 | Runs the cluster services. |
+| <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo CD | GitOps and automatic sync of applications from the repository. |
+| <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo Rollouts | Progressive delivery controller for Kubernetes Rollout resources. |
+| <img src="https://cdn.simpleicons.org/renovate" alt="" width="20" height="20" /> Renovate | Checks dependencies weekly and opens GitHub pull requests; runs as a Kubernetes CronJob. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Kustomize | Composes Kubernetes manifests. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> MetalLB | Exposes `LoadBalancer` services on the LAN. |
+| <img src="https://cdn.simpleicons.org/rancher" alt="" width="20" height="20" /> Rancher Local Path Provisioner | Local volumes for applications. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> External Secrets Operator | Syncs secrets from AWS Secrets Manager. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> cert-manager | Manages TLS certificates for Kubernetes resources. |
+| <img src="https://cdn.simpleicons.org/traefikproxy" alt="" width="20" height="20" /> Traefik | Ingress controller exposed through MetalLB. |
+| <img src="https://cdn.simpleicons.org/istio" alt="" width="20" height="20" /> Istio | Service mesh control plane; workloads opt in to sidecar injection individually. |
+| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus and Grafana | Metrics collection and dashboards. |
+| <img src="https://cdn.simpleicons.org/terraform" alt="" width="20" height="20" /> Terraform | Manages AWS backup resources and installs Velero in the existing RKE2 cluster. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Velero | Backs up Kubernetes resources and mounted PVC data to Amazon S3. |
+| <img src="https://cdn.simpleicons.org/python" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/garmin" alt="" width="20" height="20" /> Python and Garmin Connect Personal API | Fetches Garmin data, stores it in SQLite and publishes metrics. |
+| <img src="https://cdn.simpleicons.org/zigbee2mqtt" alt="" width="20" height="20" /> Zigbee2MQTT | Handles Zigbee sensors through a Sonoff USB dongle and publishes readings to MQTT. |
+| <img src="https://cdn.simpleicons.org/eclipsemosquitto" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/mqtt" alt="" width="20" height="20" /> Mosquitto (MQTT) | MQTT broker with authentication; credentials come from AWS through ESO. |
+| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/mqtt" alt="" width="20" height="20" /> mqtt2prometheus | Converts MQTT readings into Prometheus metrics. |
+| <img src="https://cdn.simpleicons.org/cloudflare" alt="" width="20" height="20" /> Cloudflare Tunnel (`cloudflared`) | Remote access to Grafana without opening router ports. |
 
 ## Repository structure
 
@@ -324,25 +324,25 @@ flowchart LR
 
 | Technologia | Zastosowanie |
 | --- | --- |
-| Kubernetes / RKE2 | Uruchamianie usług klastra; instrukcje instalacji znajdują się niżej. |
-| Argo CD | GitOps i automatyczna synchronizacja aplikacji z repozytorium. |
-| Argo Rollouts | Kontroler wdrożeń progresywnych dla zasobów Kubernetes `Rollout`. |
-| Renovate | Cotygodniowo sprawdza zależności i otwiera pull requesty GitHuba; działa jako Kubernetes CronJob. |
-| Kustomize | Składanie manifestów Kubernetes. |
-| MetalLB | Udostępnianie usług typu `LoadBalancer` w sieci LAN. |
-| Rancher Local Path Provisioner | Lokalne wolumeny dla aplikacji. |
-| External Secrets Operator | Synchronizacja sekretów z AWS Secrets Manager. |
-| cert-manager | Zarządzanie certyfikatami TLS dla zasobów Kubernetes. |
-| Traefik | Kontroler Ingress udostępniony przez MetalLB. |
-| Istio | Control plane service mesh; workloady dołączają do sidecar injection indywidualnie. |
-| Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
-| Terraform | Zarządzanie zasobami AWS do backupu i instalacja Velero w istniejącym klastrze RKE2. |
-| Velero | Backup zasobów Kubernetes i danych zamontowanych PVC do Amazon S3. |
-| Python i Garmin Connect Personal API | Pobieranie danych Garmin, zapis w SQLite i publikowanie metryk. |
-| Zigbee2MQTT | Obsługa czujników Zigbee przez dongle USB Sonoff i publikowanie pomiarów w MQTT. |
-| Mosquitto (MQTT) | Broker wiadomości MQTT z logowaniem; dane logowania pochodzą z AWS przez ESO. |
-| mqtt2prometheus | Zamiana pomiarów z MQTT na metryki Prometheusa. |
-| Cloudflare Tunnel (`cloudflared`) | Zdalny dostęp do Grafany bez otwierania portów w routerze. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Kubernetes / RKE2 | Uruchamianie usług klastra; instrukcje instalacji znajdują się niżej. |
+| <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo CD | GitOps i automatyczna synchronizacja aplikacji z repozytorium. |
+| <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo Rollouts | Kontroler wdrożeń progresywnych dla zasobów Kubernetes `Rollout`. |
+| <img src="https://cdn.simpleicons.org/renovate" alt="" width="20" height="20" /> Renovate | Cotygodniowo sprawdza zależności i otwiera pull requesty GitHuba; działa jako Kubernetes CronJob. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Kustomize | Składanie manifestów Kubernetes. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> MetalLB | Udostępnianie usług typu `LoadBalancer` w sieci LAN. |
+| <img src="https://cdn.simpleicons.org/rancher" alt="" width="20" height="20" /> Rancher Local Path Provisioner | Lokalne wolumeny dla aplikacji. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> External Secrets Operator | Synchronizacja sekretów z AWS Secrets Manager. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> cert-manager | Zarządzanie certyfikatami TLS dla zasobów Kubernetes. |
+| <img src="https://cdn.simpleicons.org/traefikproxy" alt="" width="20" height="20" /> Traefik | Kontroler Ingress udostępniony przez MetalLB. |
+| <img src="https://cdn.simpleicons.org/istio" alt="" width="20" height="20" /> Istio | Control plane service mesh; workloady dołączają do sidecar injection indywidualnie. |
+| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
+| <img src="https://cdn.simpleicons.org/terraform" alt="" width="20" height="20" /> Terraform | Zarządzanie zasobami AWS do backupu i instalacja Velero w istniejącym klastrze RKE2. |
+| <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Velero | Backup zasobów Kubernetes i danych zamontowanych PVC do Amazon S3. |
+| <img src="https://cdn.simpleicons.org/python" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/garmin" alt="" width="20" height="20" /> Python i Garmin Connect Personal API | Pobieranie danych Garmin, zapis w SQLite i publikowanie metryk. |
+| <img src="https://cdn.simpleicons.org/zigbee2mqtt" alt="" width="20" height="20" /> Zigbee2MQTT | Obsługa czujników Zigbee przez dongle USB Sonoff i publikowanie pomiarów w MQTT. |
+| <img src="https://cdn.simpleicons.org/eclipsemosquitto" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/mqtt" alt="" width="20" height="20" /> Mosquitto (MQTT) | Broker wiadomości MQTT z logowaniem; dane logowania pochodzą z AWS przez ESO. |
+| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/mqtt" alt="" width="20" height="20" /> mqtt2prometheus | Zamiana pomiarów z MQTT na metryki Prometheusa. |
+| <img src="https://cdn.simpleicons.org/cloudflare" alt="" width="20" height="20" /> Cloudflare Tunnel (`cloudflared`) | Zdalny dostęp do Grafany bez otwierania portów w routerze. |
 
 ## Struktura repozytorium
 
