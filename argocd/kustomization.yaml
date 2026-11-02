@@ -16,3 +16,4 @@ resources:
   - infrastrucure/traefik.yaml
   - infrastrucure/argo-rollouts.yaml
   - infrastrucure/istio.yaml
+  - infrastrucure/kiali.yaml

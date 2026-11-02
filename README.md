@@ -84,7 +84,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
 - **Argo CD** is reachable at `https://argocd.andrzejsidor.uk` through Traefik (`192.168.0.202`) or directly at `https://192.168.0.203`. cert-manager issues both DNS and IP SANs from an internal HomeLab CA; trust the CA root certificate on client devices.
-- **Istio** control plane runs in `istio-system`; no workloads are automatically injected, and no Istio gateway is installed. Traefik remains the ingress controller.
+- **Istio and Kiali** run in `istio-system`; workloads are not automatically injected and no Istio gateway is installed. Open Kiali locally with `kubectl -n istio-system port-forward svc/kiali 20001:20001` and visit `http://localhost:20001`. Traefik remains the ingress controller.
 - **Argo Rollouts** is installed in namespace `argo-rollouts` with its CRDs. Existing Deployments are unchanged; progressive delivery starts when an application is migrated to a `Rollout` resource.
 - **cert-manager** is installed with its CRDs and issues Argo CD's certificate from the internal `homelab-internal-ca` ClusterIssuer. No public ACME issuer is configured.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads the `GIT_KEY` token from `homelab/secrets` in AWS Secrets Manager.
@@ -189,6 +189,14 @@ kubectl -n monitoring port-forward svc/grafana 3000:80
 ```
 
 The UI is then available at `http://localhost:3000`.
+
+Open the Istio dashboard locally with:
+
+```bash
+kubectl -n istio-system port-forward svc/kiali 20001:20001
+```
+
+Then visit `http://localhost:20001` and authenticate with a Kubernetes token.
 
 ## External Secrets Operator + AWS
 
@@ -368,7 +376,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastrucure/grafana.yaml`.
 - **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
 - **Argo CD** jest dostępne pod `https://argocd.andrzejsidor.uk` przez Traefika (`192.168.0.202`) albo bezpośrednio pod `https://192.168.0.203`. cert-manager wystawia SAN dla nazwy DNS i IP z wewnętrznego CA HomeLab; zaufaj certyfikatowi root CA na urządzeniach klienckich.
-- **Istio** działa jako control plane w namespace `istio-system`; sidecar injection nie jest włączony automatycznie, nie instalowano też gatewaya Istio. Kontrolerem Ingress pozostaje Traefik.
+- **Istio i Kiali** działają w namespace `istio-system`; workloads nie są automatycznie wstrzykiwane, a gateway Istio nie jest zainstalowany. Panel Kiali otworzysz lokalnie przez `kubectl -n istio-system port-forward svc/kiali 20001:20001` pod `http://localhost:20001`; logowanie odbywa się tokenem Kubernetes. Kontrolerem Ingress pozostaje Traefik.
 - **Argo Rollouts** jest zainstalowany w namespace `argo-rollouts` razem z CRD. Istniejące Deploymenty pozostają bez zmian; wdrożenia progresywne wymagają migracji aplikacji do zasobu `Rollout`.
 - **cert-manager** jest zainstalowany razem z CRD i wystawia certyfikat Argo CD przez wewnętrzny ClusterIssuer `homelab-internal-ca`. Publiczny issuer ACME nie jest skonfigurowany.
 - **Renovate** działa w namespace `renovate` w każdy poniedziałek o 06:00 czasu Europe/Warsaw i otwiera PR-y dla `andsidor/HomeLab`. External Secrets pobiera z AWS token `GIT_KEY` z `homelab/secrets`.
@@ -472,6 +480,14 @@ kubectl -n monitoring port-forward svc/grafana 3000:80
 ```
 
 Panel będzie dostępny pod `http://localhost:3000`. AWS secret `homelab/monitoring/grafana-admin` powinien być obiektem JSON z polami `admin-user` i `admin-password`.
+
+Dashboard Istio (Kiali) uruchom lokalnie po synchronizacji:
+
+```bash
+kubectl -n istio-system port-forward svc/kiali 20001:20001
+```
+
+Otwórz `http://localhost:20001` i zaloguj się tokenem Kubernetes.
 
 ## External Secrets Operator + AWS
 
