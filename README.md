@@ -197,7 +197,7 @@ The `aws-secretsmanager` `ClusterSecretStore` connects ESO to AWS Secrets Manage
 Use IAM keys with `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret`, restricted to the ARNs of the required secrets in `eu-north-1`. With a custom KMS key also add a restricted `kms:Decrypt`. After syncing, check the store with `kubectl get clustersecretstore aws-secretsmanager`.
 
 Secrets Manager inventory (names only; never document secret values):
-- `homelab/secrets` contains workload values for Garmin, MQTT, Cloudflare Tunnel and the Renovate GitHub App (`renovate-app-id`, `renovate-app-installation-id`, `renovate-app-private-key`).
+- `homelab/secrets` contains workload values for Garmin, MQTT, Cloudflare Tunnel and the Renovate classic GitHub token (`GIT_KEY`).
 - `homelab/velero-backup` contains the dedicated Velero IAM user's credentials.
 - `homelab/rke2-etcd-backup` contains credentials for RKE2 etcd snapshots in S3.
 
@@ -480,7 +480,7 @@ Panel będzie dostępny pod `http://localhost:3000`. AWS secret `homelab/monitor
 Użyj kluczy IAM z uprawnieniami `secretsmanager:GetSecretValue` i `secretsmanager:DescribeSecret`, ograniczonymi do ARN potrzebnych sekretów w `eu-north-1`. Przy własnym kluczu KMS dodaj także ograniczone `kms:Decrypt`. Po synchronizacji sprawdź store: `kubectl get clustersecretstore aws-secretsmanager`.
 
 Sekrety w Secrets Manager (same nazwy; nigdy nie dokumentuj ich wartości):
-- `homelab/secrets` zawiera dane workloadów Garmin, MQTT, Cloudflare Tunnel i GitHub App Renovate (`renovate-app-id`, `renovate-app-installation-id`, `renovate-app-private-key`).
+- `homelab/secrets` zawiera dane workloadów Garmin, MQTT, Cloudflare Tunnel oraz classic GitHub PAT dla Renovate (`GIT_KEY`).
 - `homelab/velero-backup` zawiera poświadczenia dedykowanego użytkownika IAM dla Velero.
 - `homelab/rke2-etcd-backup` zawiera poświadczenia do zapisu snapshotów etcd RKE2 w S3.
 
