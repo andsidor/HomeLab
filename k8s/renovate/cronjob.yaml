@@ -22,50 +22,6 @@ spec:
             seccompProfile:
               type: RuntimeDefault
           restartPolicy: Never
-          volumes:
-            - name: github-app-private-key
-              secret:
-                secretName: renovate-github-app
-                defaultMode: 0440
-                items:
-                  - key: private-key
-                    path: private-key.pem
-            - name: installation-token
-              emptyDir: {}
-          initContainers:
-            - name: create-installation-token
-              image: ghcr.io/mshekow/github-app-installation-token:latest
-              imagePullPolicy: Always
-              securityContext:
-                allowPrivilegeEscalation: false
-                capabilities:
-                  drop: ["ALL"]
-                runAsNonRoot: true
-                runAsUser: 12021
-                runAsGroup: 0
-              command: ["/bin/sh", "-c"]
-              args:
-                - >-
-                  umask 077;
-                  node /app/index.js "$APP_ID" "$INSTALLATION_ID"
-                  /private-key/private-key.pem > /token/token
-              env:
-                - name: APP_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: renovate-github-app
-                      key: app-id
-                - name: INSTALLATION_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: renovate-github-app
-                      key: installation-id
-              volumeMounts:
-                - name: github-app-private-key
-                  mountPath: /private-key
-                  readOnly: true
-                - name: installation-token
-                  mountPath: /token
           containers:
             - name: renovate
               image: ghcr.io/renovatebot/renovate:44.199.2
@@ -78,20 +34,17 @@ spec:
                 runAsUser: 12021
                 runAsGroup: 0
               command: ["/bin/sh", "-c"]
-              args:
-                - >-
-                  set -eu;
-                  export RENOVATE_TOKEN="$(cat /token/token)";
-                  exec renovate
+              args: ["exec renovate"]
               env:
                 - name: RENOVATE_PLATFORM
                   value: github
                 - name: RENOVATE_REPOSITORIES
                   value: andsidor/HomeLab
-              volumeMounts:
-                - name: installation-token
-                  mountPath: /token
-                  readOnly: true
+                - name: RENOVATE_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: renovate-github-token
+                      key: token
               resources:
                 requests:
                   cpu: 100m
