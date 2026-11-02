@@ -36,6 +36,7 @@ flowchart LR
 | --- | --- |
 | Kubernetes / RKE2 | Runs the cluster services. |
 | Argo CD | GitOps and automatic sync of applications from the repository. |
+| Argo Rollouts | Progressive delivery controller for Kubernetes Rollout resources. |
 | Renovate | Checks dependencies weekly and opens GitHub pull requests; runs as a Kubernetes CronJob. |
 | Kustomize | Composes Kubernetes manifests. |
 | MetalLB | Exposes `LoadBalancer` services on the LAN. |
@@ -84,6 +85,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
 - **Argo CD** is reachable at `https://argocd.andrzejsidor.uk` through Traefik (`192.168.0.202`) or directly at `https://192.168.0.203`. cert-manager issues both DNS and IP SANs from an internal HomeLab CA; trust the CA root certificate on client devices.
 - **Istio and Kiali** run in `istio-system`; workloads are not automatically injected and no Istio gateway is installed. Open Kiali at `http://192.168.0.204:20001`. Traefik remains the ingress controller.
+- **Argo Rollouts** is installed in namespace `argo-rollouts` with its CRDs. Existing Deployments are unchanged; progressive delivery starts when an application is migrated to a `Rollout` resource.
 - **cert-manager** is installed with its CRDs and issues Argo CD's certificate from the internal `homelab-internal-ca` ClusterIssuer. No public ACME issuer is configured.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads the `GIT_KEY` token from `homelab/secrets` in AWS Secrets Manager.
 - **Prometheus** keeps metrics for 90 days on a persistent volume (`local-path-retain` class, 10Gi).
@@ -320,6 +322,7 @@ flowchart LR
 | --- | --- |
 | Kubernetes / RKE2 | Uruchamianie usług klastra; instrukcje instalacji znajdują się niżej. |
 | Argo CD | GitOps i automatyczna synchronizacja aplikacji z repozytorium. |
+| Argo Rollouts | Kontroler wdrożeń progresywnych dla zasobów Kubernetes `Rollout`. |
 | Renovate | Cotygodniowo sprawdza zależności i otwiera pull requesty GitHuba; działa jako Kubernetes CronJob. |
 | Kustomize | Składanie manifestów Kubernetes. |
 | MetalLB | Udostępnianie usług typu `LoadBalancer` w sieci LAN. |
@@ -368,6 +371,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
 - **Argo CD** jest dostępne pod `https://argocd.andrzejsidor.uk` przez Traefika (`192.168.0.202`) albo bezpośrednio pod `https://192.168.0.203`. cert-manager wystawia SAN dla nazwy DNS i IP z wewnętrznego CA HomeLab; zaufaj certyfikatowi root CA na urządzeniach klienckich.
 - **Istio i Kiali** działają w namespace `istio-system`; workloads nie są automatycznie wstrzykiwane, a gateway Istio nie jest zainstalowany. Panel Kiali jest dostępny pod `http://192.168.0.204:20001`; logowanie odbywa się tokenem Kubernetes. Kontrolerem Ingress pozostaje Traefik.
+- **Argo Rollouts** jest zainstalowany w namespace `argo-rollouts` razem z CRD. Istniejące Deploymenty pozostają bez zmian; wdrożenia progresywne wymagają migracji aplikacji do zasobu `Rollout`.
 - **cert-manager** jest zainstalowany razem z CRD i wystawia certyfikat Argo CD przez wewnętrzny ClusterIssuer `homelab-internal-ca`. Publiczny issuer ACME nie jest skonfigurowany.
 - **Renovate** działa w namespace `renovate` w każdy poniedziałek o 06:00 czasu Europe/Warsaw i otwiera PR-y dla `andsidor/HomeLab`. External Secrets pobiera z AWS token `GIT_KEY` z `homelab/secrets`.
 - **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).

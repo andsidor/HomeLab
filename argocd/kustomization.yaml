@@ -14,5 +14,6 @@ resources:
   - infrastructure/external-secrets-namespace.yaml
   - infrastructure/cert-manager.yaml
   - infrastructure/traefik.yaml
+  - infrastructure/argo-rollouts.yaml
   - infrastructure/istio.yaml
   - infrastructure/kiali.yaml
