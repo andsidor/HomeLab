@@ -104,8 +104,8 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **Zigbee2MQTT** runs on the `debian` node with a Sonoff dongle, and its UI is exposed through MetalLB at `192.168.0.201:8080`. Readings go to the **Mosquitto** MQTT broker on topic `zigbee2mqtt/<device>`, and `mqtt2prometheus` exposes them to Prometheus.
 - **MQTT credentials** (`mqtt-user`, `mqtt-password`) live in AWS Secrets Manager (`homelab/secrets`) and reach the cluster as the `mqtt-credentials` secret; anonymous access is disabled.
 - **Cloudflare Tunnel** connects the cluster to Cloudflare using a token from AWS (`cloudflared-token`). The public route targets `http://grafana.monitoring.svc.cluster.local:80`; protect it with Cloudflare Access or expose only the public dashboard paths.
-- **Garmin** runs as a CronJob every 30 minutes. The Personal API key is synced from AWS by ESO, data goes to SQLite on a PVC, and metrics are pushed to the Pushgateway.
-- **Velero** runs in namespace `velero` and backs up cluster resources to S3 every 30 minutes at :07 and :37 UTC, with 7-day retention. A restore validation on 2026-11-04 confirmed that the local-path-backed Garmin PVC (`garmin-data`) is skipped: Velero reports its `hostPath` volume as unsupported. Garmin files are not currently protected by Velero; CSI/EBS snapshots are also disabled.
+- **Garmin** runs as a CronJob every 30 minutes. The Personal API key is synced from AWS by ESO, data goes to SQLite on a 1Gi PVC (`garmin-data`), and metrics are pushed to the Pushgateway. The PVC was migrated with checksum and SQLite integrity verification; the previous 5Gi PV is retained for rollback.
+- **Velero** runs in namespace `velero` and backs up cluster resources to S3 every 30 minutes at :07 and :37 UTC, with 7-day retention. It still skips Garmin PVC files: Velero reports the local-path `hostPath` volume as unsupported. Garmin files are not currently protected by Velero; CSI/EBS snapshots are also disabled.
 
 ## Log Analysis
 
@@ -408,8 +408,8 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **Loki i Alloy** zbierają logi podów Kubernetes i udostępniają je do wyszukiwania w Grafanie. Loki przechowuje logi przez 14 dni na wolumenie `local-path-retain` o pojemności 10Gi; Alloy działa jako DaemonSet i pobiera logi przez Kubernetes API.
 - **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
 - **Cloudflare Tunnel** łączy klaster z Cloudflare przez token z AWS; trasa publiczna wskazuje na Grafanę, a dostęp warto chronić przez Cloudflare Access.
-- **Garmin** działa jako CronJob co 30 minut. Klucz Personal API jest synchronizowany z AWS przez ESO, dane trafiają do SQLite na PVC, a metryki są wysyłane do Pushgateway.
-- **Velero** działa w namespace `velero` i co 30 minut, o :07 i :37 UTC, zapisuje zasoby klastra do S3; retencja wynosi 7 dni. Test odtwarzania z 2026-11-04 potwierdził, że PVC Garmin (`garmin-data`) na local-path jest pomijany: Velero zgłasza jego wolumen `hostPath` jako nieobsługiwany. Pliki Garmin nie są obecnie chronione przez Velero; snapshoty CSI/EBS również są wyłączone.
+- **Garmin** działa jako CronJob co 30 minut. Klucz Personal API jest synchronizowany z AWS przez ESO, dane trafiają do SQLite na PVC `garmin-data` o pojemności 1Gi, a metryki są wysyłane do Pushgateway. Migrację zweryfikowano sumami plików i testem integralności SQLite; poprzedni PV 5Gi zachowano do ewentualnego rollbacku.
+- **Velero** działa w namespace `velero` i co 30 minut, o :07 i :37 UTC, zapisuje zasoby klastra do S3; retencja wynosi 7 dni. Nadal pomija pliki PVC Garmina: Velero zgłasza wolumen local-path typu `hostPath` jako nieobsługiwany. Pliki Garmin nie są obecnie chronione przez Velero; snapshoty CSI/EBS również są wyłączone.
 
 ## Analiza logów
 
