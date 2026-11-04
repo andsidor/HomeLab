@@ -1,0 +1,92 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://grafana-community.github.io/helm-charts
+    chart: loki
+    targetRevision: 20.4.1
+    helm:
+      releaseName: loki
+      values: |
+        deploymentMode: Monolithic
+        loki:
+          auth_enabled: false
+          commonConfig:
+            replication_factor: 1
+          schemaConfig:
+            configs:
+              - from: "2024-04-01"
+                store: tsdb
+                object_store: filesystem
+                schema: v13
+                index:
+                  prefix: loki_index_
+                  period: 24h
+          storage:
+            type: filesystem
+          limits_config:
+            retention_period: 336h
+          compactor:
+            working_directory: /var/loki/compactor
+            retention_enabled: true
+            delete_request_store: filesystem
+        singleBinary:
+          replicas: 1
+          persistence:
+            enabled: true
+            storageClass: local-path-retain
+            size: 10Gi
+            whenDeleted: Retain
+            whenScaled: Retain
+            enableStatefulSetAutoDeletePVC: false
+        backend:
+          replicas: 0
+        read:
+          replicas: 0
+        write:
+          replicas: 0
+        ingester:
+          replicas: 0
+        querier:
+          replicas: 0
+        queryFrontend:
+          replicas: 0
+        queryScheduler:
+          replicas: 0
+        distributor:
+          replicas: 0
+        compactor:
+          replicas: 0
+        indexGateway:
+          replicas: 0
+        bloomPlanner:
+          replicas: 0
+        bloomBuilder:
+          replicas: 0
+        bloomGateway:
+          replicas: 0
+        ruler:
+          replicas: 0
+        patternIngester:
+          replicas: 0
+        chunksCache:
+          enabled: false
+        resultsCache:
+          enabled: false
+        memcached:
+          enabled: false
+        lokiCanary:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

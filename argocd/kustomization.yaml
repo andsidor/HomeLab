@@ -10,6 +10,8 @@ resources:
   - infrastructure/local-path-provisioner.yaml
   - infrastructure/grafana.yaml
   - infrastructure/prometheus.yaml
+  - infrastructure/loki.yaml
+  - infrastructure/alloy.yaml
   - infrastructure/external-secrets.yaml
   - infrastructure/external-secrets-namespace.yaml
   - infrastructure/cert-manager.yaml

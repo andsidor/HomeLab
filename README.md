@@ -16,13 +16,17 @@ The project combines core cluster services with a Garmin data collector and a sm
 flowchart LR
   Git[GitHub: main] --> Root[Argo CD: root Application]
   Root --> Infra[MetalLB, storage, ESO]
-  Root --> Monitor[Prometheus and Grafana]
+  Root --> Monitor[Prometheus, Loki, Alloy, and Grafana]
   Root --> Garmin[Garmin CronJob]
   Garmin --> AWS[AWS Secrets Manager]
   Garmin --> PVC[(SQLite on PVC)]
   Garmin --> Pushgateway[Prometheus Pushgateway]
   Pushgateway --> Prometheus[Prometheus]
   Prometheus --> Grafana[Grafana]
+  Root --> Loki[Loki log storage]
+  Root --> Alloy[Alloy log collector]
+  Alloy --> Loki
+  Loki --> Grafana
   Root --> Z2M[Zigbee2MQTT + Mosquitto]
   Sensor[Zigbee sensor] --> Dongle[Sonoff dongle] --> Z2M
   Z2M -->|MQTT| Exporter[mqtt2prometheus]
@@ -50,6 +54,7 @@ flowchart LR
 | <img src="https://cdn.simpleicons.org/traefikproxy" alt="" width="20" height="20" /> Traefik | Ingress controller exposed through MetalLB. |
 | <img src="https://cdn.simpleicons.org/istio" alt="" width="20" height="20" /> Istio | Service mesh control plane; workloads opt in to sidecar injection individually. |
 | <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus and Grafana | Metrics collection and dashboards. |
+| <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Loki and Alloy | Kubernetes pod log collection, storage, and search in Grafana. |
 | <img src="https://cdn.simpleicons.org/terraform" alt="" width="20" height="20" /> Terraform | Manages AWS backup resources and installs Velero in the existing RKE2 cluster. |
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Velero | Backs up Kubernetes resources and mounted PVC data to Amazon S3. |
 | <img src="https://cdn.simpleicons.org/python" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/garmin" alt="" width="20" height="20" /> Python and Garmin Connect Personal API | Fetches Garmin data, stores it in SQLite and publishes metrics. |
@@ -93,6 +98,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **cert-manager** is installed with its CRDs and issues Argo CD's certificate from the internal `homelab-internal-ca` ClusterIssuer. No public ACME issuer is configured.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads the `GIT_KEY` token from `homelab/secrets` in AWS Secrets Manager.
 - **Prometheus** keeps metrics for 90 days on a persistent volume (`local-path-retain` class, 10Gi).
+- **Loki and Alloy** collect Kubernetes pod logs and make them searchable in Grafana. Loki stores logs on a 10Gi `local-path-retain` volume with 14-day retention; Alloy runs as a DaemonSet and reads logs through the Kubernetes API.
 - **Zigbee2MQTT** runs on the `debian` node with a Sonoff dongle, and its UI is exposed through MetalLB at `192.168.0.201:8080`. Readings go to the **Mosquitto** MQTT broker on topic `zigbee2mqtt/<device>`, and `mqtt2prometheus` exposes them to Prometheus.
 - **MQTT credentials** (`mqtt-user`, `mqtt-password`) live in AWS Secrets Manager (`homelab/secrets`) and reach the cluster as the `mqtt-credentials` secret; anonymous access is disabled.
 - **Cloudflare Tunnel** connects the cluster to Cloudflare using a token from AWS (`cloudflared-token`). The public route targets `http://grafana.monitoring.svc.cluster.local:80`; protect it with Cloudflare Access or expose only the public dashboard paths.
