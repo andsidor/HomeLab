@@ -17,4 +17,4 @@ spec:
   storageClassName: garmin-local-path
   resources:
     requests:
-      storage: 5Gi
+      storage: 1Gi
