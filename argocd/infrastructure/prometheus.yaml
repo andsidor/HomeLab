@@ -16,12 +16,104 @@ spec:
           enabled: false
         server:
           retention: 90d
+          alertmanagers: []
           persistentVolume:
             enabled: true
             size: 10Gi
             storageClass: local-path-retain
           service:
             type: ClusterIP
+        serverFiles:
+          alerting_rules.yml:
+            groups:
+              - name: homelab-operational
+                rules:
+                  - alert: LocalPathNodeStorageLow
+                    expr: 100 * (1 - node_filesystem_avail_bytes{mountpoint="/", fstype="ext4"} / node_filesystem_size_bytes{mountpoint="/", fstype="ext4"}) > 85
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: Node storage is running low
+                      description: A node filesystem used by local-path PVCs is more than 85% full. This is a node-level proxy, not per-PVC usage.
+                  - alert: KubernetesDeploymentUnavailable
+                    expr: kube_deployment_status_replicas_unavailable > 0
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: Kubernetes Deployment has unavailable replicas
+                      description: At least one desired Deployment replica is unavailable.
+                  - alert: KubernetesStatefulSetUnavailable
+                    expr: kube_statefulset_status_replicas_ready < kube_statefulset_replicas
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: Kubernetes StatefulSet has unavailable replicas
+                      description: The StatefulSet has fewer ready replicas than desired.
+                  - alert: KubernetesDaemonSetUnavailable
+                    expr: kube_daemonset_status_number_unavailable > 0
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: Kubernetes DaemonSet has unavailable pods
+                      description: At least one desired DaemonSet pod is unavailable.
+                  - alert: KubernetesPodPending
+                    expr: kube_pod_status_phase{phase="Pending"} == 1
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: Kubernetes pod has been Pending
+                      description: A pod has remained Pending for at least 10 minutes.
+                  - alert: VeleroBackupFailed
+                    expr: increase(velero_backup_failure_total{namespace="velero"}[30m]) > 0
+                    for: 1m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: Velero backup failed
+                      description: Velero recorded a backup failure in the last 30 minutes.
+                  - alert: VeleroBackupStale
+                    expr: time() - velero_backup_last_successful_timestamp{schedule="velero-daily"} > 3600
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: Velero scheduled backup is overdue
+                      description: No successful scheduled Velero backup has completed in the last hour.
+                  - alert: ArgoCDApplicationOutOfSync
+                    expr: argocd_app_info{sync_status="OutOfSync"} == 1
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: Argo CD application is OutOfSync
+                      description: An Argo CD application has remained OutOfSync for at least 5 minutes.
+                  - alert: CertificateExpiresSoon
+                    expr: (certmanager_certificate_expiration_timestamp_seconds - time()) < 30 * 24 * 60 * 60 and (certmanager_certificate_expiration_timestamp_seconds - time()) > 0
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: Certificate expires within 30 days
+                      description: A cert-manager certificate will expire in less than 30 days.
+                  - alert: CertificateExpired
+                    expr: certmanager_certificate_expiration_timestamp_seconds - time() <= 0
+                    for: 1m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: Certificate has expired
+                      description: A cert-manager certificate has passed its expiration time.
+        extraScrapeConfigs: |
+          - job_name: argocd-applications
+            scrape_interval: 30s
+            static_configs:
+              - targets:
+                  - argocd-metrics.argocd.svc.cluster.local:8082
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

@@ -10,13 +10,13 @@ English | [Polski](#homelab-wersja-polska)
 
 This repository describes a home Kubernetes (RKE2) environment managed declaratively with GitOps. Argo CD watches the `main` branch, deploys applications from Kustomize manifests and keeps the cluster in sync with the repository.
 
-The project combines core cluster services with a Garmin data collector and a smart home stack built on Zigbee2MQTT and an MQTT broker. MetalLB exposes services on a local LAN address pool, Local Path Provisioner provides local volumes, and External Secrets Operator (ESO) syncs selected secrets from AWS Secrets Manager. Prometheus collects metrics that are visualized in Grafana. Zigbee sensors publish measurements over MQTT, and an exporter turns them into Prometheus metrics. Cloudflare Tunnel exposes Grafana, or a single public dashboard, outside the home network without opening router ports.
+The project combines core cluster services with a Garmin data collector and a smart home stack built on Zigbee2MQTT and an MQTT broker. MetalLB exposes services on a local LAN address pool, Local Path Provisioner provides local volumes, and External Secrets Operator (ESO) syncs selected secrets from AWS Secrets Manager. Prometheus collects metrics and Grafana displays metrics and logs. Alloy collects Kubernetes pod logs and sends them to Loki, where they can be searched with LogQL. Zigbee sensors publish measurements over MQTT, and an exporter turns them into Prometheus metrics. Cloudflare Tunnel exposes Grafana, or a single public dashboard, outside the home network without opening router ports.
 
 ```mermaid
 flowchart LR
   Git[GitHub: main] --> Root[Argo CD: root Application]
   Root --> Infra[MetalLB, storage, ESO]
-  Root --> Monitor[Prometheus, Loki, Alloy, and Grafana]
+  Root --> Monitor[Prometheus and Grafana]
   Root --> Garmin[Garmin CronJob]
   Garmin --> AWS[AWS Secrets Manager]
   Garmin --> PVC[(SQLite on PVC)]
@@ -71,6 +71,7 @@ flowchart LR
 | `argocd/kustomization.yaml` | List of applications and infrastructure managed by Argo CD. |
 | `argocd/applications/` | Application definitions deployed from this repository. |
 | `argocd/infrastructure/` | Cluster services and infrastructure configuration. |
+| `argocd/infrastructure/loki.yaml` and `alloy.yaml` | Loki log storage and Alloy Kubernetes pod log collection. |
 | `k8s/garmin-app/` | CronJob, PVC and secret configuration of the Garmin app. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, the `mqtt2prometheus` exporter and MQTT credentials. |
 | `k8s/cloudflared/` | Cloudflare tunnel and the token secret pulled from AWS. |
@@ -98,12 +99,24 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **cert-manager** is installed with its CRDs and issues Argo CD's certificate from the internal `homelab-internal-ca` ClusterIssuer. No public ACME issuer is configured.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads the `GIT_KEY` token from `homelab/secrets` in AWS Secrets Manager.
 - **Prometheus** keeps metrics for 90 days on a persistent volume (`local-path-retain` class, 10Gi).
+- **Operational alerts** cover unavailable Kubernetes workloads, Velero backup failures/staleness, Argo CD `OutOfSync`, and certificate expiry. The local-path storage alert measures node filesystem usage, not individual PVC usage; per-PVC usage metrics are unavailable. Alertmanager notifications are not configured yet.
 - **Loki and Alloy** collect Kubernetes pod logs and make them searchable in Grafana. Loki stores logs on a 10Gi `local-path-retain` volume with 14-day retention; Alloy runs as a DaemonSet and reads logs through the Kubernetes API.
 - **Zigbee2MQTT** runs on the `debian` node with a Sonoff dongle, and its UI is exposed through MetalLB at `192.168.0.201:8080`. Readings go to the **Mosquitto** MQTT broker on topic `zigbee2mqtt/<device>`, and `mqtt2prometheus` exposes them to Prometheus.
 - **MQTT credentials** (`mqtt-user`, `mqtt-password`) live in AWS Secrets Manager (`homelab/secrets`) and reach the cluster as the `mqtt-credentials` secret; anonymous access is disabled.
 - **Cloudflare Tunnel** connects the cluster to Cloudflare using a token from AWS (`cloudflared-token`). The public route targets `http://grafana.monitoring.svc.cluster.local:80`; protect it with Cloudflare Access or expose only the public dashboard paths.
 - **Garmin** runs as a CronJob every 30 minutes. The Personal API key is synced from AWS by ESO, data goes to SQLite on a PVC, and metrics are pushed to the Pushgateway.
-- **Velero** runs in namespace `velero`. It backs up cluster resources and pod-mounted PVC data to S3 every 30 minutes at :07 and :37 UTC, with 7-day retention. File-system backup uses the node-agent; CSI/EBS snapshots are disabled because the cluster uses local-path volumes.
+- **Velero** runs in namespace `velero` and backs up cluster resources to S3 every 30 minutes at :07 and :37 UTC, with 7-day retention. A restore validation on 2026-11-04 confirmed that the local-path-backed Garmin PVC (`garmin-data`) is skipped: Velero reports its `hostPath` volume as unsupported. Garmin files are not currently protected by Velero; CSI/EBS snapshots are also disabled.
+
+## Log Analysis
+
+In Grafana, open **Explore**, select the **Loki** data source, and run a LogQL query such as:
+
+```logql
+{namespace="zigbee2mqtt"}
+{namespace="zigbee2mqtt"} |= "error"
+```
+
+Alloy runs as a DaemonSet and collects pod logs through the Kubernetes API. Loki is internal-only; logs are stored on a 10Gi `local-path-retain` volume for 14 days. Host journal logs and Kubernetes events are not collected. Treat logs as potentially sensitive and do not expose Loki or log queries through public Grafana dashboards.
 
 ## Screenshots / Zrzuty ekranu
 
@@ -302,7 +315,7 @@ Repozytorium opisuje domowe środowisko Kubernetes zarządzane deklaratywnie prz
 
 ## Przegląd
 
-Projekt łączy podstawowe usługi klastra z aplikacją do pobierania danych Garmin oraz z systemem smart home opartym na Zigbee2MQTT i brokerze MQTT. MetalLB udostępnia usługi przez adresy z lokalnej puli LAN, Local Path Provisioner zapewnia lokalne wolumeny, a External Secrets Operator synchronizuje wybrane sekrety z AWS Secrets Manager. Prometheus zbiera metryki, które można przeglądać w Grafanie. Czujniki Zigbee publikują pomiary przez MQTT, a eksporter zamienia je na metryki Prometheusa. Cloudflare Tunnel pozwala bezpiecznie udostępnić Grafanę lub wybrany dashboard poza siecią domową.
+Projekt łączy podstawowe usługi klastra z aplikacją do pobierania danych Garmin oraz z systemem smart home opartym na Zigbee2MQTT i brokerze MQTT. MetalLB udostępnia usługi przez adresy z lokalnej puli LAN, Local Path Provisioner zapewnia lokalne wolumeny, a External Secrets Operator synchronizuje wybrane sekrety z AWS Secrets Manager. Prometheus zbiera metryki, a Grafana umożliwia przeglądanie metryk i logów. Alloy zbiera logi podów Kubernetes i wysyła je do Loki, gdzie można je przeszukiwać przez LogQL. Czujniki Zigbee publikują pomiary przez MQTT, a eksporter zamienia je na metryki Prometheusa. Cloudflare Tunnel pozwala bezpiecznie udostępnić Grafanę lub wybrany dashboard poza siecią domową.
 
 ```mermaid
 flowchart LR
@@ -315,6 +328,10 @@ flowchart LR
   Garmin --> Pushgateway[Prometheus Pushgateway]
   Pushgateway --> Prometheus[Prometheus]
   Prometheus --> Grafana[Grafana]
+  Root --> Loki[Loki: logi]
+  Root --> Alloy[Alloy: zbieranie logów]
+  Alloy --> Loki
+  Loki --> Grafana
   Root --> Z2M[Zigbee2MQTT + Mosquitto]
   Sensor[Czujnik Zigbee] --> Dongle[Dongle Sonoff] --> Z2M
   Z2M -->|MQTT| Exporter[mqtt2prometheus]
@@ -342,6 +359,7 @@ flowchart LR
 | <img src="https://cdn.simpleicons.org/traefikproxy" alt="" width="20" height="20" /> Traefik | Kontroler Ingress udostępniony przez MetalLB. |
 | <img src="https://cdn.simpleicons.org/istio" alt="" width="20" height="20" /> Istio | Control plane service mesh; workloady dołączają do sidecar injection indywidualnie. |
 | <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
+| <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Loki i Alloy | Zbieranie logów podów Kubernetes, ich przechowywanie i wyszukiwanie w Grafanie. |
 | <img src="https://cdn.simpleicons.org/terraform" alt="" width="20" height="20" /> Terraform | Zarządzanie zasobami AWS do backupu i instalacja Velero w istniejącym klastrze RKE2. |
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Velero | Backup zasobów Kubernetes i danych zamontowanych PVC do Amazon S3. |
 | <img src="https://cdn.simpleicons.org/python" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/garmin" alt="" width="20" height="20" /> Python i Garmin Connect Personal API | Pobieranie danych Garmin, zapis w SQLite i publikowanie metryk. |
@@ -358,6 +376,7 @@ flowchart LR
 | `argocd/kustomization.yaml` | Lista aplikacji i elementów infrastruktury zarządzanych przez Argo CD. |
 | `argocd/applications/` | Definicje aplikacji wdrażanych z tego repozytorium. |
 | `argocd/infrastructure/` | Konfiguracja usług i infrastruktury klastra. |
+| `argocd/infrastructure/loki.yaml` i `alloy.yaml` | Magazyn logów Loki i zbieranie logów podów Kubernetes przez Alloy. |
 | `k8s/garmin-app/` | CronJob, PVC i konfiguracja sekretu aplikacji Garmin. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, eksporter `mqtt2prometheus` i dane logowania MQTT. |
 | `k8s/cloudflared/` | Tunel Cloudflare i sekret z tokenem pobierany z AWS. |
@@ -385,10 +404,23 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **cert-manager** jest zainstalowany razem z CRD i wystawia certyfikat Argo CD przez wewnętrzny ClusterIssuer `homelab-internal-ca`. Publiczny issuer ACME nie jest skonfigurowany.
 - **Renovate** działa w namespace `renovate` w każdy poniedziałek o 06:00 czasu Europe/Warsaw i otwiera PR-y dla `andsidor/HomeLab`. External Secrets pobiera z AWS token `GIT_KEY` z `homelab/secrets`.
 - **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).
+- **Alerty operacyjne Prometheusa** obejmują niedostępne workloady Kubernetes, błędy lub opóźnienie backupu Velero, aplikacje Argo CD `OutOfSync` i wygasające certyfikaty. Alert storage mierzy zajętość dysku węzła, a nie pojedynczego PVC local-path; metryki per-PVC są niedostępne. Powiadomienia Alertmanagera nie są jeszcze skonfigurowane.
+- **Loki i Alloy** zbierają logi podów Kubernetes i udostępniają je do wyszukiwania w Grafanie. Loki przechowuje logi przez 14 dni na wolumenie `local-path-retain` o pojemności 10Gi; Alloy działa jako DaemonSet i pobiera logi przez Kubernetes API.
 - **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
 - **Cloudflare Tunnel** łączy klaster z Cloudflare przez token z AWS; trasa publiczna wskazuje na Grafanę, a dostęp warto chronić przez Cloudflare Access.
 - **Garmin** działa jako CronJob co 30 minut. Klucz Personal API jest synchronizowany z AWS przez ESO, dane trafiają do SQLite na PVC, a metryki są wysyłane do Pushgateway.
-- **Velero** działa w namespace `velero`. Co 30 minut, o :07 i :37 UTC, zapisuje zasoby klastra i dane PVC zamontowane w podach do S3; retencja wynosi 7 dni. Backup plikowy wykorzystuje node-agent; snapshoty CSI/EBS są wyłączone, ponieważ klaster używa wolumenów local-path.
+- **Velero** działa w namespace `velero` i co 30 minut, o :07 i :37 UTC, zapisuje zasoby klastra do S3; retencja wynosi 7 dni. Test odtwarzania z 2026-11-04 potwierdził, że PVC Garmin (`garmin-data`) na local-path jest pomijany: Velero zgłasza jego wolumen `hostPath` jako nieobsługiwany. Pliki Garmin nie są obecnie chronione przez Velero; snapshoty CSI/EBS również są wyłączone.
+
+## Analiza logów
+
+W Grafanie otwórz **Explore**, wybierz źródło danych **Loki** i uruchom zapytanie LogQL, na przykład:
+
+```logql
+{namespace="zigbee2mqtt"}
+{namespace="zigbee2mqtt"} |= "error"
+```
+
+Alloy działa jako DaemonSet i zbiera logi podów przez Kubernetes API. Loki jest dostępny tylko wewnątrz klastra; logi są przechowywane przez 14 dni na wolumenie `local-path-retain` o pojemności 10Gi. Logi systemowego journala hostów i eventy Kubernetes nie są zbierane. Traktuj logi jako potencjalnie poufne i nie udostępniaj Loki ani zapytań do logów w publicznych dashboardach Grafany.
 
 ## Notatki i komendy
 
