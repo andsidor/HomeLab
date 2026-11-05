@@ -159,6 +159,11 @@ spec:
             static_configs:
               - targets:
                   - argocd-metrics.argocd.svc.cluster.local:8082
+          - job_name: alertmanager
+            scrape_interval: 30s
+            static_configs:
+              - targets:
+                  - prometheus-alertmanager.monitoring.svc.cluster.local:9093
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

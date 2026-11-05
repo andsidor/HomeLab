@@ -75,6 +75,64 @@ spec:
                     }
                   ]
                 }
+            zigbee3:
+              json: |
+                {
+                  "title": "Zigbee3",
+                  "uid": "zigbee3",
+                  "schemaVersion": 39,
+                  "time": {"from": "now-24h", "to": "now"},
+                  "refresh": "30s",
+                  "panels": [
+                    {
+                      "id": 1,
+                      "type": "timeseries",
+                      "title": "Temperatura",
+                      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 0},
+                      "fieldConfig": {"defaults": {"unit": "celsius", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]}}, "overrides": []},
+                      "targets": [{"expr": "last_over_time(zigbee_temperature_celsius[30m])", "legendFormat": "{{sensor}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 2,
+                      "type": "timeseries",
+                      "title": "Wilgotność",
+                      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 0},
+                      "fieldConfig": {"defaults": {"unit": "percent", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]}}, "overrides": []},
+                      "targets": [{"expr": "last_over_time(zigbee_humidity_percent[30m])", "legendFormat": "{{sensor}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 5,
+                      "type": "stat",
+                      "title": "Temperatura + trendy",
+                      "gridPos": {"h": 5, "w": 12, "x": 0, "y": 9},
+                      "fieldConfig": {"defaults": {"unit": "celsius", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]}}, "overrides": []},
+                      "targets": [{"expr": "zigbee_temperature_celsius", "legendFormat": "{{sensor}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 6,
+                      "type": "stat",
+                      "title": "Wilgotność + trendy",
+                      "gridPos": {"h": 5, "w": 12, "x": 12, "y": 9},
+                      "fieldConfig": {"defaults": {"unit": "percent", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]}}, "overrides": []},
+                      "targets": [{"expr": "zigbee_humidity_percent", "legendFormat": "{{sensor}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 4,
+                      "type": "timeseries",
+                      "title": "Jakość sygnału",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 14},
+                      "targets": [{"expr": "zigbee_linkquality", "legendFormat": "{{sensor}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 3,
+                      "type": "stat",
+                      "title": "Bateria",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 14},
+                      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100}, "overrides": []},
+                      "targets": [{"expr": "last_over_time(zigbee_battery_percent[30m])", "legendFormat": "{{sensor}}", "refId": "A"}]
+                    }
+                  ]
+                }
             garmin:
               json: |
                 {
@@ -123,6 +181,116 @@ spec:
                       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
                       "fieldConfig": {"defaults": {"unit": "dateTimeFromNow"}, "overrides": []},
                       "targets": [{"expr": "garmin_sync_last_attempt_timestamp_seconds * 1000", "refId": "A"}]
+                    }
+                  ]
+                }
+            alerts:
+              json: |
+                {
+                  "title": "Alerty",
+                  "uid": "homelab-alerts",
+                  "schemaVersion": 39,
+                  "version": 1,
+                  "time": {"from": "now-24h", "to": "now"},
+                  "refresh": "30s",
+                  "templating": {
+                    "list": [
+                      {
+                        "name": "node",
+                        "label": "Node",
+                        "type": "query",
+                        "definition": "label_values(node_cpu_seconds_total, instance)",
+                        "query": {"query": "label_values(node_cpu_seconds_total, instance)", "refId": "Prometheus-node-Variable"},
+                        "refresh": 1,
+                        "multi": true,
+                        "includeAll": true,
+                        "allValue": ".*",
+                        "current": {"selected": true, "text": "All", "value": "$__all"},
+                        "options": []
+                      }
+                    ]
+                  },
+                  "panels": [
+                    {
+                      "id": 1,
+                      "type": "stat",
+                      "title": "Aktywne alerty w klastrze",
+                      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+                      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+                      "targets": [{"expr": "sum(ALERTS{alertstate=\"firing\"}) or vector(0)", "refId": "A"}]
+                    },
+                    {
+                      "id": 2,
+                      "type": "stat",
+                      "title": "Oczekujące alerty",
+                      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+                      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]}}, "overrides": []},
+                      "targets": [{"expr": "sum(ALERTS{alertstate=\"pending\"}) or vector(0)", "refId": "A"}]
+                    },
+                    {
+                      "id": 3,
+                      "type": "stat",
+                      "title": "Alertmanager scrape",
+                      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+                      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+                      "targets": [{"expr": "up{job=\"alertmanager\"}", "refId": "A"}]
+                    },
+                    {
+                      "id": 4,
+                      "type": "stat",
+                      "title": "Nieudane e-maile (24h)",
+                      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+                      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+                      "targets": [{"expr": "sum(increase(alertmanager_notifications_failed_total{integration=\"email\"}[24h])) or vector(0)", "refId": "A"}]
+                    },
+                    {
+                      "id": 5,
+                      "type": "table",
+                      "title": "Aktywne alerty",
+                      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 5},
+                      "targets": [{"expr": "ALERTS{alertstate=\"firing\"}", "format": "table", "instant": true, "refId": "A"}]
+                    },
+                    {
+                      "id": 6,
+                      "type": "timeseries",
+                      "title": "CPU per node",
+                      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 14},
+                      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 75}]}}, "overrides": []},
+                      "targets": [{"expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\", instance=~\"$node\"}[5m])))", "legendFormat": "{{instance}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 9,
+                      "type": "timeseries",
+                      "title": "RAM per node",
+                      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 14},
+                      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 80}]}}, "overrides": []},
+                      "targets": [{"expr": "100 * (1 - node_memory_MemAvailable_bytes{instance=~\"$node\"} / node_memory_MemTotal_bytes{instance=~\"$node\"})", "legendFormat": "{{instance}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 7,
+                      "type": "timeseries",
+                      "title": "Wysyłka powiadomień e-mail",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 23},
+                      "fieldConfig": {"defaults": {"unit": "ops"}, "overrides": []},
+                      "targets": [
+                        {"expr": "sum by (receiver) (rate(alertmanager_notifications_total{integration=\"email\"}[5m]))", "legendFormat": "wysłane {{receiver}}", "refId": "A"},
+                        {"expr": "sum by (receiver) (rate(alertmanager_notifications_failed_total{integration=\"email\"}[5m]))", "legendFormat": "błędy {{receiver}}", "refId": "B"}
+                      ]
+                    },
+                    {
+                      "id": 8,
+                      "type": "stat",
+                      "title": "Konfiguracja Alertmanagera",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 23},
+                      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+                      "targets": [{"expr": "alertmanager_config_last_reload_successful", "refId": "A"}]
+                    },
+                    {
+                      "id": 10,
+                      "type": "table",
+                      "title": "Alerty CPU/RAM per node",
+                      "gridPos": {"h": 7, "w": 24, "x": 0, "y": 31},
+                      "targets": [{"expr": "ALERTS{alertname=~\"NodeCPUUsageHigh|NodeMemoryUsageHigh\", alertstate=~\"firing|pending\", instance=~\"$node\"}", "format": "table", "instant": true, "refId": "A"}]
                     }
                   ]
                 }
