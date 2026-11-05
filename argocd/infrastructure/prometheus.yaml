@@ -164,6 +164,20 @@ spec:
             static_configs:
               - targets:
                   - prometheus-alertmanager.monitoring.svc.cluster.local:9093
+          - job_name: argo-rollouts
+            scrape_interval: 30s
+            kubernetes_sd_configs:
+              - role: endpoints
+                namespaces:
+                  names:
+                    - argo-rollouts
+            relabel_configs:
+              - source_labels: [__meta_kubernetes_service_name]
+                action: keep
+                regex: argo-rollouts-metrics
+              - source_labels: [__meta_kubernetes_endpoint_port_name]
+                action: keep
+                regex: metrics
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

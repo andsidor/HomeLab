@@ -294,6 +294,100 @@ spec:
                     }
                   ]
                 }
+            argo-rollouts:
+              json: |
+                {
+                  "title": "Argo Rollouts",
+                  "uid": "argo-rollouts",
+                  "schemaVersion": 39,
+                  "version": 1,
+                  "time": {"from": "now-24h", "to": "now"},
+                  "refresh": "30s",
+                  "panels": [
+                    {
+                      "id": 1,
+                      "type": "stat",
+                      "title": "Kontroler Prometheus",
+                      "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0},
+                      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+                      "targets": [{"expr": "min(up{job=\"argo-rollouts\"})", "refId": "A"}]
+                    },
+                    {
+                      "id": 2,
+                      "type": "stat",
+                      "title": "Wersja kontrolera",
+                      "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0},
+                      "options": {"textMode": "name"},
+                      "targets": [{"expr": "max(argo_rollouts_controller_info)", "legendFormat": "{{version}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 3,
+                      "type": "stat",
+                      "title": "Rollouty",
+                      "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0},
+                      "targets": [{"expr": "sum(rollout_info) or vector(0)", "refId": "A"}]
+                    },
+                    {
+                      "id": 4,
+                      "type": "stat",
+                      "title": "Rollouty z błędem",
+                      "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0},
+                      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+                      "targets": [{"expr": "sum(rollout_info{phase=~\"Error|Timeout|Abort|InvalidSpec\"}) or vector(0)", "refId": "A"}]
+                    },
+                    {
+                      "id": 5,
+                      "type": "timeseries",
+                      "title": "Rollouty według fazy",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5},
+                      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+                      "targets": [{"expr": "sum by (phase) (rollout_info)", "legendFormat": "{{phase}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 6,
+                      "type": "timeseries",
+                      "title": "Dostępne i brakujące repliki",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5},
+                      "fieldConfig": {"defaults": {"unit": "short", "min": 0}, "overrides": []},
+                      "targets": [
+                        {"expr": "rollout_info_replicas_available", "legendFormat": "dostępne {{namespace}}/{{name}}", "refId": "A"},
+                        {"expr": "rollout_info_replicas_unavailable", "legendFormat": "brakujące {{namespace}}/{{name}}", "refId": "B"},
+                        {"expr": "rollout_info_replicas_desired", "legendFormat": "oczekiwane {{namespace}}/{{name}}", "refId": "C"}
+                      ]
+                    },
+                    {
+                      "id": 7,
+                      "type": "table",
+                      "title": "Błędy reconciliacji (1h)",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 13},
+                      "targets": [{"expr": "sum by (namespace, name) (increase(rollout_reconcile_error[1h]))", "format": "table", "instant": true, "refId": "A"}]
+                    },
+                    {
+                      "id": 8,
+                      "type": "timeseries",
+                      "title": "Czas reconciliacji p95",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 13},
+                      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+                      "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(rollout_reconcile_bucket[5m])))", "legendFormat": "p95", "refId": "A"}]
+                    },
+                    {
+                      "id": 9,
+                      "type": "timeseries",
+                      "title": "Żądania API Kubernetes",
+                      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 21},
+                      "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
+                      "targets": [{"expr": "sum by (verb) (rate(controller_clientset_k8s_request_total[5m]))", "legendFormat": "{{verb}}", "refId": "A"}]
+                    },
+                    {
+                      "id": 10,
+                      "type": "timeseries",
+                      "title": "Pamięć kontrolera",
+                      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 21},
+                      "fieldConfig": {"defaults": {"unit": "bytes"}, "overrides": []},
+                      "targets": [{"expr": "process_resident_memory_bytes{job=\"argo-rollouts\"}", "legendFormat": "{{instance}}", "refId": "A"}]
+                    }
+                  ]
+                }
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring
