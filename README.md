@@ -53,7 +53,7 @@ flowchart LR
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> cert-manager | Manages TLS certificates for Kubernetes resources. |
 | <img src="https://cdn.simpleicons.org/traefikproxy" alt="" width="20" height="20" /> Traefik | Ingress controller exposed through MetalLB. |
 | <img src="https://cdn.simpleicons.org/istio" alt="" width="20" height="20" /> Istio | Service mesh control plane; workloads opt in to sidecar injection individually. |
-| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus and Grafana | Metrics collection and dashboards. |
+| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus and Grafana | Metrics, dashboards, and email alerting through Alertmanager. |
 | <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Loki and Alloy | Kubernetes pod log collection, storage, and search in Grafana. |
 | <img src="https://cdn.simpleicons.org/terraform" alt="" width="20" height="20" /> Terraform | Manages AWS backup resources and installs Velero in the existing RKE2 cluster. |
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Velero | Backs up Kubernetes resources and mounted PVC data to Amazon S3. |
@@ -91,7 +91,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 
 ## Services
 
-- **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee` and `Garmin` dashboards are provisioned from `argocd/infrastructure/grafana.yaml`.
+- **Grafana** is exposed through MetalLB at `192.168.0.200`; Prometheus is the default data source. The `Zigbee`, `Zigbee3`, `Garmin`, and `Alerty` dashboards are provisioned from `argocd/infrastructure/grafana.yaml`.
 - **Traefik** is exposed through MetalLB at `192.168.0.202`; use `ingressClassName: traefik` on Ingress resources. Its IngressClass is not the cluster default.
 - **Argo CD** is reachable at `https://argocd.andrzejsidor.uk` through Traefik (`192.168.0.202`) or directly at `https://192.168.0.203`. cert-manager issues both DNS and IP SANs from an internal HomeLab CA; trust the CA root certificate on client devices.
 - **Istio and Kiali** run in `istio-system`; workloads are not automatically injected and no Istio gateway is installed. Open Kiali at `http://192.168.0.204:20001`. Traefik remains the ingress controller.
@@ -99,7 +99,7 @@ The root Application watches the `argocd/` directory. To add a new application, 
 - **cert-manager** is installed with its CRDs and issues Argo CD's certificate from the internal `homelab-internal-ca` ClusterIssuer. No public ACME issuer is configured.
 - **Renovate** runs every Monday at 06:00 Europe/Warsaw in namespace `renovate` and opens PRs for `andsidor/HomeLab`. External Secrets reads the `GIT_KEY` token from `homelab/secrets` in AWS Secrets Manager.
 - **Prometheus** keeps metrics for 90 days on a persistent volume (`local-path-retain` class, 10Gi).
-- **Operational alerts** cover unavailable Kubernetes workloads, Velero backup failures/staleness, Argo CD `OutOfSync`, and certificate expiry. The local-path storage alert measures node filesystem usage, not individual PVC usage; per-PVC usage metrics are unavailable. Alertmanager notifications are not configured yet.
+- **Operational alerts** cover high node CPU, memory and filesystem usage, unavailable or pending Kubernetes workloads, Velero backup failures/staleness, Argo CD `OutOfSync`, and certificate expiry. Alertmanager is configured to send email through Gmail SMTP; its SMTP password is synced from AWS Secrets Manager (`homelab/secrets`, `smtp-auth-password`) by ESO into `alertmanager-smtp`. The local-path storage alert measures node filesystem usage, not individual PVC usage; per-PVC usage metrics are unavailable. Configuration is in Git, but successful email delivery should be verified in the cluster.
 - **Loki and Alloy** collect Kubernetes pod logs and make them searchable in Grafana. Loki stores logs on a 10Gi `local-path-retain` volume with 14-day retention; Alloy runs as a DaemonSet and reads logs through the Kubernetes API.
 - **Zigbee2MQTT** runs on the `debian` node with a Sonoff dongle, and its UI is exposed through MetalLB at `192.168.0.201:8080`. Readings go to the **Mosquitto** MQTT broker on topic `zigbee2mqtt/<device>`, and `mqtt2prometheus` exposes them to Prometheus.
 - **MQTT credentials** (`mqtt-user`, `mqtt-password`) live in AWS Secrets Manager (`homelab/secrets`) and reach the cluster as the `mqtt-credentials` secret; anonymous access is disabled.
@@ -229,7 +229,8 @@ Secrets Manager inventory (names only; never document secret values):
 Notes:
 - Do not commit secrets (use Sealed Secrets / SOPS / External Secrets).
 - A private GHCR package requires an `imagePullSecret` (token with `read:packages`).
-- After the first login change the admin password and delete `argocd-initial-admin-secret`.
+- Grafana's `grafana-admin-local` Secret is synchronized from AWS `homelab/secrets` (`admin-user` and `admin-password`) by ESO.
+- After the first Argo CD login change the admin password and delete `argocd-initial-admin-secret`.
 
 ## Terraform and Velero (AWS)
 
@@ -358,7 +359,7 @@ flowchart LR
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> cert-manager | Zarządzanie certyfikatami TLS dla zasobów Kubernetes. |
 | <img src="https://cdn.simpleicons.org/traefikproxy" alt="" width="20" height="20" /> Traefik | Kontroler Ingress udostępniony przez MetalLB. |
 | <img src="https://cdn.simpleicons.org/istio" alt="" width="20" height="20" /> Istio | Control plane service mesh; workloady dołączają do sidecar injection indywidualnie. |
-| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus i Grafana | Zbieranie oraz przeglądanie metryk. |
+| <img src="https://cdn.simpleicons.org/prometheus" alt="" width="20" height="20" /> <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Prometheus i Grafana | Metryki, dashboardy i powiadomienia e-mail przez Alertmanager. |
 | <img src="https://cdn.simpleicons.org/grafana" alt="" width="20" height="20" /> Loki i Alloy | Zbieranie logów podów Kubernetes, ich przechowywanie i wyszukiwanie w Grafanie. |
 | <img src="https://cdn.simpleicons.org/terraform" alt="" width="20" height="20" /> Terraform | Zarządzanie zasobami AWS do backupu i instalacja Velero w istniejącym klastrze RKE2. |
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Velero | Backup zasobów Kubernetes i danych zamontowanych PVC do Amazon S3. |
@@ -396,7 +397,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 
 ## Usługi
 
-- **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee` i `Garmin` są provisionowane z `argocd/infrastructure/grafana.yaml`.
+- **Grafana** jest udostępniana przez MetalLB pod adresem `192.168.0.200`; domyślnym źródłem danych jest Prometheus. Dashboardy `Zigbee`, `Zigbee3`, `Garmin` i `Alerty` są provisionowane z `argocd/infrastructure/grafana.yaml`.
 - **Traefik** jest udostępniony przez MetalLB pod adresem `192.168.0.202`; zasoby Ingress powinny wskazywać `ingressClassName: traefik`. Klasa Traefika nie jest domyślną klasą klastra.
 - **Argo CD** jest dostępne pod `https://argocd.andrzejsidor.uk` przez Traefika (`192.168.0.202`) albo bezpośrednio pod `https://192.168.0.203`. cert-manager wystawia SAN dla nazwy DNS i IP z wewnętrznego CA HomeLab; zaufaj certyfikatowi root CA na urządzeniach klienckich.
 - **Istio i Kiali** działają w namespace `istio-system`; workloads nie są automatycznie wstrzykiwane, a gateway Istio nie jest zainstalowany. Panel Kiali jest dostępny pod `http://192.168.0.204:20001`; logowanie odbywa się tokenem Kubernetes. Kontrolerem Ingress pozostaje Traefik.
@@ -404,7 +405,7 @@ Root Application obserwuje katalog `argocd/`. Dodanie nowej aplikacji wymaga dod
 - **cert-manager** jest zainstalowany razem z CRD i wystawia certyfikat Argo CD przez wewnętrzny ClusterIssuer `homelab-internal-ca`. Publiczny issuer ACME nie jest skonfigurowany.
 - **Renovate** działa w namespace `renovate` w każdy poniedziałek o 06:00 czasu Europe/Warsaw i otwiera PR-y dla `andsidor/HomeLab`. External Secrets pobiera z AWS token `GIT_KEY` z `homelab/secrets`.
 - **Prometheus** przechowuje metryki przez 90 dni na trwałym wolumenie (klasa `local-path-retain`, 10Gi).
-- **Alerty operacyjne Prometheusa** obejmują niedostępne workloady Kubernetes, błędy lub opóźnienie backupu Velero, aplikacje Argo CD `OutOfSync` i wygasające certyfikaty. Alert storage mierzy zajętość dysku węzła, a nie pojedynczego PVC local-path; metryki per-PVC są niedostępne. Powiadomienia Alertmanagera nie są jeszcze skonfigurowane.
+- **Alerty operacyjne Prometheusa** obejmują wysokie użycie CPU, RAM i systemu plików węzłów, niedostępne lub oczekujące workloady Kubernetes, błędy lub opóźnienie backupu Velero, aplikacje Argo CD `OutOfSync` i wygasające certyfikaty. Alertmanager jest skonfigurowany do wysyłania e-maili przez Gmail SMTP; hasło SMTP jest synchronizowane przez ESO z AWS Secrets Manager (`homelab/secrets`, `smtp-auth-password`) do sekretu `alertmanager-smtp`. Alert storage mierzy zajętość dysku węzła, a nie pojedynczego PVC local-path; metryki per-PVC są niedostępne. Konfiguracja jest w repozytorium, ale dostarczenie wiadomości należy potwierdzić w klastrze.
 - **Loki i Alloy** zbierają logi podów Kubernetes i udostępniają je do wyszukiwania w Grafanie. Loki przechowuje logi przez 14 dni na wolumenie `local-path-retain` o pojemności 10Gi; Alloy działa jako DaemonSet i pobiera logi przez Kubernetes API.
 - **Zigbee2MQTT** działa na węźle `debian` z donglem Sonoff, a panel jest dostępny przez MetalLB pod `192.168.0.201:8080`. Pomiary trafiają do brokera **Mosquitto** (MQTT) w temacie `zigbee2mqtt/<urządzenie>`, a `mqtt2prometheus` udostępnia je Prometheusowi.
 - **Cloudflare Tunnel** łączy klaster z Cloudflare przez token z AWS; trasa publiczna wskazuje na Grafanę, a dostęp warto chronić przez Cloudflare Access.
@@ -424,7 +425,7 @@ Alloy działa jako DaemonSet i zbiera logi podów przez Kubernetes API. Loki jes
 
 ## Notatki i komendy
 
-Aplikacja `garmin_app.py` pobiera dane z Garmin Connect Personal API.
+Aplikacja `garmin_app.py` pobiera dane z Garmin Connect Personal API. Komendy diagnostyczne i notatki operacyjne znajdują się w [HL-NOTE.md](HL-NOTE.md).
 
 ## Aplikacja Garmin (Python)
 
@@ -515,7 +516,7 @@ Grafana (Helm chart w Argo CD) korzysta z istniejącego sekretu Kubernetes `graf
 kubectl -n monitoring port-forward svc/grafana 3000:80
 ```
 
-Panel będzie dostępny pod `http://localhost:3000`. AWS secret `homelab/monitoring/grafana-admin` powinien być obiektem JSON z polami `admin-user` i `admin-password`.
+Panel będzie dostępny pod `http://localhost:3000`. ESO synchronizuje pola `admin-user` i `admin-password` z AWS secret `homelab/secrets` do Kubernetes Secret `grafana-admin-local`, używanego przez chart Helm.
 
 Dashboard Istio (Kiali) jest dostępny po synchronizacji pod `http://192.168.0.204:20001`. Zaloguj się tokenem Kubernetes.
 
@@ -526,7 +527,7 @@ Dashboard Istio (Kiali) jest dostępny po synchronizacji pod `http://192.168.0.2
 Użyj kluczy IAM z uprawnieniami `secretsmanager:GetSecretValue` i `secretsmanager:DescribeSecret`, ograniczonymi do ARN potrzebnych sekretów w `eu-north-1`. Przy własnym kluczu KMS dodaj także ograniczone `kms:Decrypt`. Po synchronizacji sprawdź store: `kubectl get clustersecretstore aws-secretsmanager`.
 
 Sekrety w Secrets Manager (same nazwy; nigdy nie dokumentuj ich wartości):
-- `homelab/secrets` zawiera dane workloadów Garmin, MQTT, Cloudflare Tunnel oraz classic GitHub PAT dla Renovate (`GIT_KEY`).
+- `homelab/secrets` zawiera dane workloadów Garmin, MQTT, Cloudflare Tunnel, dane logowania Grafany (`admin-user`, `admin-password`), hasło SMTP Alertmanagera (`smtp-auth-password`) oraz classic GitHub PAT dla Renovate (`GIT_KEY`).
 - `homelab/velero-backup` zawiera poświadczenia dedykowanego użytkownika IAM dla Velero.
 - `homelab/rke2-etcd-backup` zawiera poświadczenia do zapisu snapshotów etcd RKE2 w S3.
 
