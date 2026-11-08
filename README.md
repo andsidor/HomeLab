@@ -72,6 +72,7 @@ flowchart LR
 | `argocd/applications/` | Application definitions deployed from this repository. |
 | `argocd/infrastructure/` | Cluster services and infrastructure configuration. |
 | `argocd/infrastructure/loki.yaml` and `alloy.yaml` | Loki log storage and Alloy Kubernetes pod log collection. |
+| `files/` | Screenshots used in this README. |
 | `k8s/garmin-app/` | CronJob, PVC and secret configuration of the Garmin app. |
 | `k8s/zigbee2mqtt/` | Zigbee2MQTT, Mosquitto, the `mqtt2prometheus` exporter and MQTT credentials. |
 | `k8s/cloudflared/` | Cloudflare tunnel and the token secret pulled from AWS. |
@@ -122,13 +123,15 @@ Alloy runs as a DaemonSet and collects pod logs through the Kubernetes API. Loki
 
 Argo CD statuses and Grafana values change over time. The Secrets Manager image shows names and descriptions only, not secret values. Statusy Argo CD i wartości Grafany zmieniają się w czasie. Obraz Secrets Manager pokazuje tylko nazwy i opisy, bez wartości sekretów.
 
-![AWS Secrets Manager inventory / Lista sekretów AWS Secrets Manager](secret.png)
+![AWS Secrets Manager inventory / Lista sekretów AWS Secrets Manager](files/sekret.png)
 
-![Argo CD applications / Aplikacje Argo CD](argo.jpg)
+![Argo CD applications / Aplikacje Argo CD](files/argo.jpg)
 
-![Terraform and Velero S3 buckets / Buckety S3 Terraform i Velero](s3.jpg)
+![Terraform and Velero S3 buckets / Buckety S3 Terraform i Velero](files/s3.jpg)
 
-![Grafana Zigbee dashboard / Dashboard Zigbee w Grafanie](grafana.png)
+![Grafana Zigbee dashboard / Dashboard Zigbee w Grafanie](files/grafana.png)
+
+![Grafana Zigbee2 dashboard / Dashboard Zigbee2 w Grafanie](files/grafana-ARC1.jpg)
 
 ## Notes and commands
 
