@@ -79,6 +79,7 @@ flowchart LR
 | `k8s/cloudflared/` | Cloudflare tunnel and the token secret pulled from AWS. |
 | `k8s/argocd-access/` | Internal CA, Argo CD TLS certificate and direct MetalLB service. |
 | `terraform/` | S3 buckets, remote Terraform state, Velero IAM credentials, and Helm release. |
+| `docs/variable-and-dependency-map.md` ([PDF](docs/variable-and-dependency-map.pdf)) | Variable inputs, secret mappings, and dependency flows across CI, GitOps, Kubernetes, and Terraform. |
 | `garmin_app.py` | Fetches and stores Garmin data and publishes metrics. |
 
 ## GitOps
@@ -401,6 +402,7 @@ flowchart LR
 | `k8s/cloudflared/` | Tunel Cloudflare i sekret z tokenem pobierany z AWS. |
 | `k8s/argocd-access/` | Wewnętrzny CA, certyfikat TLS Argo CD i bezpośrednia usługa MetalLB. |
 | `terraform/` | Buckety S3, zdalny state Terraform, uprawnienia Velero i release Helm. |
+| `docs/variable-and-dependency-map.md` ([PDF](docs/variable-and-dependency-map.pdf)) | Mapa zmiennych, mapowania sekretów i zależności CI, GitOps, Kubernetes oraz Terraform. |
 | `garmin_app.py` | Pobieranie i zapisywanie danych Garmin oraz publikowanie metryk. |
 
 ## GitOps
