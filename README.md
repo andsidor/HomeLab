@@ -122,7 +122,7 @@ Alloy runs as a DaemonSet and collects pod logs through the Kubernetes API. Loki
 
 Argo CD statuses and Grafana values change over time. The Secrets Manager image shows names and descriptions only, not secret values. Statusy Argo CD i wartości Grafany zmieniają się w czasie. Obraz Secrets Manager pokazuje tylko nazwy i opisy, bez wartości sekretów.
 
-![AWS Secrets Manager inventory / Lista sekretów AWS Secrets Manager](secret.jpg)
+![AWS Secrets Manager inventory / Lista sekretów AWS Secrets Manager](secret.png)
 
 ![Argo CD applications / Aplikacje Argo CD](argo.jpg)
 
