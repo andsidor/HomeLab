@@ -128,7 +128,7 @@ Argo CD statuses and Grafana values change over time. The Secrets Manager image 
 
 ![Terraform and Velero S3 buckets / Buckety S3 Terraform i Velero](s3.jpg)
 
-![Grafana Zigbee dashboard / Dashboard Zigbee w Grafanie](grafana.jpg)
+![Grafana Zigbee dashboard / Dashboard Zigbee w Grafanie](grafana.png)
 
 ## Notes and commands
 
