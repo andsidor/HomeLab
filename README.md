@@ -131,8 +131,6 @@ Argo CD statuses and Grafana values change over time. The Secrets Manager image 
 
 ![Grafana Zigbee dashboard / Dashboard Zigbee w Grafanie](files/grafana.png)
 
-![Grafana Zigbee2 dashboard / Dashboard Zigbee2 w Grafanie](files/grafana-ARC1.jpg)
-
 ## Notes and commands
 
 Debugging commands and lessons learned are collected in [HL-NOTE.md](HL-NOTE.md) (Polish and English sections). Never commit secrets or tokens; keep them in AWS Secrets Manager.
