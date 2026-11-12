@@ -62,13 +62,12 @@ jobs:
 
       - name: Push image to GHCR
         if: github.event_name != 'pull_request'
-        env:
-          IMAGE: ghcr.io/${{ github.repository }}
         run: |
-          podman tag garmin-app:ci "$IMAGE:podman"
-          podman tag garmin-app:ci "$IMAGE:podman-${GITHUB_SHA}"
-          podman push "$IMAGE:podman"
-          podman push "$IMAGE:podman-${GITHUB_SHA}"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          podman tag garmin-app:ci "$image:podman"
+          podman tag garmin-app:ci "$image:podman-${GITHUB_SHA}"
+          podman push "$image:podman"
+          podman push "$image:podman-${GITHUB_SHA}"
 
   docker:
     needs: [codeql, python-security]

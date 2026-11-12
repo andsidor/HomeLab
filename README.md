@@ -147,7 +147,9 @@ python garmin_app.py --download-fit        # also download activity files
 - The API key is exchanged for a bearer token automatically; the token cache is stored in `~/.config/garmin`.
 - Create the key in the [Garmin Connect settings](https://connect.garmin.com/app/settings/personalApiToken) and treat it like a password.
 
-## Docker
+## Docker / Podman
+
+Docker:
 
 ```bash
 docker build -t garmin-app .
@@ -156,6 +158,18 @@ docker run -it --rm \
   -v "$PWD/garmin_data:/data" \
   garmin-app --days 7
 ```
+
+Podman:
+
+```bash
+podman build -t garmin-app .
+podman run --rm -it \
+  -e GARMIN_PERSONAL_API_KEY \
+  -v "$PWD/garmin_data:/data:Z" \
+  garmin-app --days 7
+```
+
+The `:Z` volume option relabels the directory for SELinux hosts. Set `GARMIN_PERSONAL_API_KEY` in the environment before running the container.
 
 ## Git / GitHub
 
@@ -168,7 +182,7 @@ git add . && git commit -m "message" && git push -u origin main
 
 - `codeql` - Python code analysis
 - `python-security` - `bandit -r garmin_app.py`, `pip-audit -r requirements.txt`
-- `podman-build` - builds the image with Podman and publishes `podman` and `podman-<commit-sha>` tags to GHCR (not on pull requests)
+- `podman-build` - builds the image with Podman and publishes `ghcr.io/andsidor/homelab:podman` and `podman-<commit-sha>` tags to GHCR on pushes and scheduled runs; pull requests build but do not publish
 - `docker` - build, non-blocking Trivy SARIF scan for `CRITICAL` and `HIGH`, push to `ghcr.io/andsidor/homelab`
 
 Notes:
@@ -441,7 +455,9 @@ python garmin_app.py --download-fit        # dodatkowo pliki aktywności
 - Klucz API wymienia się automatycznie na bearer token; cache tokenu trafia do `~/.config/garmin`.
 - Klucz Personal API utworzysz w [ustawieniach Garmin Connect](https://connect.garmin.com/app/settings/personalApiToken). Traktuj go jak hasło.
 
-## Docker
+## Docker / Podman
+
+Docker:
 
 ```bash
 docker build -t garmin-app .
@@ -450,6 +466,18 @@ docker run -it --rm \
   -v "$PWD/garmin_data:/data" \
   garmin-app --days 7
 ```
+
+Podman:
+
+```bash
+podman build -t garmin-app .
+podman run --rm -it \
+  -e GARMIN_PERSONAL_API_KEY \
+  -v "$PWD/garmin_data:/data:Z" \
+  garmin-app --days 7
+```
+
+Opcja wolumenu `:Z` dostosowuje etykiety katalogu na systemach z SELinux. Przed uruchomieniem ustaw `GARMIN_PERSONAL_API_KEY` w środowisku.
 
 ## Git / GitHub
 
@@ -462,7 +490,7 @@ git add . && git commit -m "opis" && git push -u origin main
 
 - `codeql` - analiza kodu Pythona
 - `python-security` - `bandit -r garmin_app.py`, `pip-audit -r requirements.txt`
-- `podman-build` - buduje obraz Podmanem i publikuje tagi `podman` oraz `podman-<commit-sha>` do GHCR (z wyłączeniem pull requestów)
+- `podman-build` - buduje obraz Podmanem i publikuje `ghcr.io/andsidor/homelab:podman` oraz `podman-<commit-sha>` przy pushu i uruchomieniu harmonogramu; pull requesty budują obraz, ale go nie publikują
 - `docker` - build, nieblokujący skan Trivy SARIF dla `CRITICAL` i `HIGH`, push do `ghcr.io/andsidor/homelab`
 
 Notatki:
