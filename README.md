@@ -168,6 +168,7 @@ git add . && git commit -m "message" && git push -u origin main
 
 - `codeql` - Python code analysis
 - `python-security` - `bandit -r garmin_app.py`, `pip-audit -r requirements.txt`
+- `podman-build` - builds the image with Podman and publishes `podman` and `podman-<commit-sha>` tags to GHCR (not on pull requests)
 - `docker` - build, non-blocking Trivy SARIF scan for `CRITICAL` and `HIGH`, push to `ghcr.io/andsidor/homelab`
 
 Notes:
@@ -461,6 +462,7 @@ git add . && git commit -m "opis" && git push -u origin main
 
 - `codeql` - analiza kodu Pythona
 - `python-security` - `bandit -r garmin_app.py`, `pip-audit -r requirements.txt`
+- `podman-build` - buduje obraz Podmanem i publikuje tagi `podman` oraz `podman-<commit-sha>` do GHCR (z wyłączeniem pull requestów)
 - `docker` - build, nieblokujący skan Trivy SARIF dla `CRITICAL` i `HIGH`, push do `ghcr.io/andsidor/homelab`
 
 Notatki:

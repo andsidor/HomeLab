@@ -34,6 +34,42 @@ jobs:
       - run: bandit -r garmin_app.py
       - run: pip-audit -r requirements.txt
 
+  podman-build:
+    needs: [codeql, python-security]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Podman if needed
+        run: |
+          if ! command -v podman >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y podman
+          fi
+
+      - name: Build image with Podman
+        run: podman build --tag garmin-app:ci .
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GHCR_TOKEN" | podman login ghcr.io --username "$GHCR_USERNAME" --password-stdin
+
+      - name: Push image to GHCR
+        if: github.event_name != 'pull_request'
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          podman tag garmin-app:ci "$IMAGE:podman"
+          podman tag garmin-app:ci "$IMAGE:podman-${GITHUB_SHA}"
+          podman push "$IMAGE:podman"
+          podman push "$IMAGE:podman-${GITHUB_SHA}"
+
   docker:
     needs: [codeql, python-security]
     runs-on: ubuntu-latest
