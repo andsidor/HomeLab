@@ -43,6 +43,7 @@ flowchart LR
 | Technology | Purpose |
 | --- | --- |
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Kubernetes / RKE2 | Runs the cluster services. |
+| <img src="https://cdn.simpleicons.org/podman" alt="" width="20" height="20" /> Podman | Builds and runs the Garmin container locally and publishes the image to GHCR in CI. |
 | <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo CD | GitOps and automatic sync of applications from the repository. |
 | <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo Rollouts | Progressive delivery controller for Kubernetes Rollout resources. |
 | <img src="https://cdn.simpleicons.org/renovate" alt="" width="20" height="20" /> Renovate | Checks dependencies weekly and opens GitHub pull requests; runs as a Kubernetes CronJob. |
@@ -365,6 +366,7 @@ flowchart LR
 | Technologia | Zastosowanie |
 | --- | --- |
 | <img src="https://cdn.simpleicons.org/kubernetes" alt="" width="20" height="20" /> Kubernetes / RKE2 | Uruchamianie usług klastra; instrukcje instalacji znajdują się niżej. |
+| <img src="https://cdn.simpleicons.org/podman" alt="" width="20" height="20" /> Podman | Budowanie i lokalne uruchamianie kontenera Garmin oraz publikowanie obrazu do GHCR w CI. |
 | <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo CD | GitOps i automatyczna synchronizacja aplikacji z repozytorium. |
 | <img src="https://cdn.simpleicons.org/argo" alt="" width="20" height="20" /> Argo Rollouts | Kontroler wdrożeń progresywnych dla zasobów Kubernetes `Rollout`. |
 | <img src="https://cdn.simpleicons.org/renovate" alt="" width="20" height="20" /> Renovate | Cotygodniowo sprawdza zależności i otwiera pull requesty GitHuba; działa jako Kubernetes CronJob. |
