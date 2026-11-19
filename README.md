@@ -134,7 +134,7 @@ Argo CD statuses and Grafana values change over time. The Secrets Manager image 
 ![Grafana Zigbee dashboard / Dashboard Zigbee w Grafanie](files/grafana.png)
 
 ## Notes and commands
-
+      
 Debugging commands and lessons learned are collected in [HL-NOTE.md](HL-NOTE.md) (Polish and English sections). Never commit secrets or tokens; keep them in AWS Secrets Manager.
 
 ## Garmin app (Python)
@@ -154,7 +154,7 @@ python garmin_app.py --download-fit        # also download activity files
 Docker:
 
 ```bash
-docker build -t garmin-app .
+docker build -t garmin-app .   
 docker run -it --rm \
   --env GARMIN_PERSONAL_API_KEY \
   -v "$PWD/garmin_data:/data" \
@@ -647,5 +647,5 @@ velero backup create manual-check --include-namespaces '*' \
 velero backup describe manual-check --details
 kubectl -n velero get podvolumebackups -l velero.io/backup-name=manual-check -o wide
 ```
-
+ TEST.
 Velero kopiuje pliki PVC tylko wtedy, gdy pod ma zamontowany wolumen. PVC Garmina używa local-path, dlatego Terraform tworzy też `velero-volume-mounter` w namespace `garmin`. Backup zasobów klastra zakończył się, ale w testach z 2026-10-31 nie potwierdzono `PodVolumeBackup` dla `garmin-data`. Nie uznawaj plików Garmin za zabezpieczone, dopóki nie pojawi się ukończony PVB dla `garmin/garmin-data` i nie zostanie przetestowane odtworzenie na odizolowanym PVC. Backup plikowy czyta aktywny system plików i nie jest atomowym snapshotem SQLite.
