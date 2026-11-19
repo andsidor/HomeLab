@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://kiali.org/helm-charts
     chart: kiali-server
-    targetRevision: 2.34.1
+    targetRevision: 2.35.0
     helm:
       releaseName: kiali
       values: |
